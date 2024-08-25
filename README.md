@@ -132,7 +132,7 @@ Here’s how we can read both:
 // Imagine request URL is example.com/test/my-title/more-text?filter=newest
 server.route("patch", "/test/:title/more-text", (req, res) => {
   const title = req.vars.title;
-  const filter = req.params.get("filter");
+  const filter = req.params.filter;
 
   console.log(title); // my-title
   console.log(filter); // newest
@@ -294,7 +294,7 @@ server.route("get", "/api/document/:title", (req, res, handleErr) => {
   const title = req.vars.title;
 
   // Reading URL parameters (like /users?filter=active)
-  const filter = req.params.get("filter");
+  const filter = req.params.filter;
 
   // Reading JSON request body
   const anything = req.body.anything;
