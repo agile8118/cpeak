@@ -1,12 +1,26 @@
 {
   "name": "cpeak",
   "version": "2.0.0",
-  "description": "",
+  "description": "A minimal and fast Node.js HTTP framework.",
   "type": "module",
   "main": "./lib/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/agile8118/cpeak.git"
+  },
+  "bugs": {
+    "url": "https://github.com/agile8118/cpeak/issues"
+  },
+  "homepage": "https://github.com/agile8118/cpeak#readme",
   "author": "Cododev Technology",
-  "license": "ISC"
+  "license": "MIT",
+  "keywords": [
+    "cpeak",
+    "nodejs",
+    "http",
+    "framework"
+  ]
 }
