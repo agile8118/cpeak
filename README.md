@@ -30,6 +30,7 @@ This is an educational project that was started as part of the [Understanding No
     - [serveStatic](#servestatic)
     - [parseJSON](#parsejson)
 - [Complete Example](#complete-example)
+- [Versioning Notice](#versioning-notice)
 
 ## Getting Started
 
@@ -329,3 +330,18 @@ server.listen(3000, () => {
   console.log("Server has started on port 3000");
 });
 ```
+
+## Versioning Notice
+
+#### Version `1.x.x`
+
+Version `1.x.x` represents the initial release of our framework, developed during the _Understanding Node.js Core Concepts_ course. These versions laid the foundation for our project.
+
+#### Version `2.x.x`
+
+All version `2.x.x` releases are considered to be in active development, following the completion of the course. These versions include ongoing feature additions and API changes as we refine the framework. Frequent updates may require code changes, so version `2.x.x` is not recommended for production environments.
+For new features, bug fixes, and other changes that don't break existing code, the patch version will be increased. For changes that break existing code, the minor version will be increased.
+
+#### Version `3.x.x`
+
+Version `3.x.x` and beyond will be our first production-ready releases. These versions are intended for stable, long-term use, with a focus on backward compatibility and minimal breaking changes.
