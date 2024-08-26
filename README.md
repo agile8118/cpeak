@@ -1,5 +1,7 @@
 # Cpeak
 
+[![npm version](https://badge.fury.io/js/cpeak.svg)](https://www.npmjs.com/package/cpeak)
+
 Cpeak is a minimal and fast Node.js framework inspired by Express.js.
 
 This project is designed to be improved until it's ready for use in complex production applications, aiming to be more performant and minimal than Express.js. This framework is intended for HTTP applications that primarily deal with JSON and file-based message bodies.
