@@ -6,7 +6,7 @@ import cpeak from "../lib/index.js";
 const PORT = 7543;
 const request = supertest(`http://localhost:${PORT}`);
 
-describe("Returning files as responses", function () {
+describe("Returning files with sendFile", function () {
   let server;
 
   before(function (done) {
