@@ -42,6 +42,8 @@ Ready to dive in? Install **Cpeak** via npm:
 npm install cpeak
 ```
 
+Cpeak is a **pure ESM** package, and to use it, your project needs to be an ESM as well. You can learn more about that [here](https://gist.github.com/sindresorhus/a39789f98801d908bbc7ff3ecc99d99c).
+
 ### Hello World App:
 
 ```javascript
