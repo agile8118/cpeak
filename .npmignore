@@ -1,3 +1,5 @@
 .gitignore
 test
 examples
+private.txt
+.DS_Store
