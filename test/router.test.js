@@ -12,9 +12,7 @@ describe("General route logic & URL variables and parameters", function () {
     server = new cpeak();
 
     server.route("get", "/hello", (req, res) => {
-      res.statusCode = 200;
-      res.setHeader("Content-Type", "application/json");
-      res.end(JSON.stringify({ message: "Hello, World!" }));
+      res.status(200).json({ message: "Hello, World!" });
     });
 
     server.route("get", "/document/:title/more/:another/final", (req, res) => {
@@ -22,9 +20,7 @@ describe("General route logic & URL variables and parameters", function () {
       const another = req.vars.another;
       const params = req.params;
 
-      res.statusCode = 200;
-      res.setHeader("Content-Type", "application/json");
-      res.end(JSON.stringify({ title, another, params }));
+      res.status(200).json({ title, another, params });
     });
 
     server.listen(PORT, done);
@@ -45,6 +41,14 @@ describe("General route logic & URL variables and parameters", function () {
     assert.strictEqual(res.status, 404);
     assert.deepStrictEqual(res.body, {
       error: "Cannot GET /unknown",
+    });
+  });
+
+  it("should return a 404 for not handled methods", async function () {
+    const res = await request.patch("/random");
+    assert.strictEqual(res.status, 404);
+    assert.deepStrictEqual(res.body, {
+      error: "Cannot PATCH /random",
     });
   });
 
