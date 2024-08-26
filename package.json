@@ -1,6 +1,6 @@
 {
   "name": "cpeak",
-  "version": "2.2.3",
+  "version": "2.2.4",
   "description": "A minimal and fast Node.js HTTP framework.",
   "type": "module",
   "main": "./lib/index.js",
