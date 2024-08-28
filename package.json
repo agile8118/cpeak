@@ -19,6 +19,8 @@
   "license": "MIT",
   "keywords": [
     "cpeak",
+    "backend",
+    "router",
     "nodejs",
     "http",
     "framework"

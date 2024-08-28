@@ -12,7 +12,7 @@ This is an educational project that was started as part of the [Understanding No
 
 - **Minimalism**: No unnecessary bloat, with zero dependencies. Just the core essentials you need to build fast and reliable applications.
 - **Performance**: Engineered to be fast, **Cpeak** won’t sacrifice speed for excessive customizability.
-- **Educational**: Every new change made in the project will be explained in great detail in a YouTube playlist (playlist will be added soon). Follow this project and let's see what it takes to build an industry-leading product!
+- **Educational**: Every new change made in the project will be explained in great detail in this [YouTube playlist](https://www.youtube.com/playlist?list=PLCiGw8i6NhvqsA-ZZcChJ0kaHZ3hcIVdY). Follow this project and let's see what it takes to build an industry-leading product!
 - **Express.js Compatible**: You can easily refactor from Cpeak to Express.js and vice versa. Many npm packages that work with Express.js will also work with Cpeak.
 
 ## Table of Contents
