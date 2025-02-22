@@ -112,6 +112,18 @@ server.beforeEach((req, res, next) => {
   );
   next();
 });
+
+### CORS Middleware
+The CORS middleware allows you to enable Cross-Origin Resource Sharing in your application.
+
+```javascript
+import { cors } from "cpeak";
+
+server.beforeEach(cors({
+  origin: "http://localhost:3000",  // Allow specific origin
+  credentials: true,                // Allow credentials
+  methods: "GET,POST,PUT,DELETE"    // Allowed methods
+}));
 ```
 
 ### Route Handling
