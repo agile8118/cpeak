@@ -8,6 +8,8 @@ This project is designed to be improved until it's ready for use in complex prod
 
 This is an educational project that was started as part of the [Understanding Node.js: Core Concepts](https://www.udemy.com/course/understanding-nodejs-core-concepts/?referralCode=0BC21AC4DD6958AE6A95) course. If you want to learn how to build a framework like this, and get to a point where you can build things like this yourself, check out this course!
 
+<em>This is the current demo, and the development of the project will begin starting from <strong>September 2025.</strong></em>
+
 ## Why Cpeak?
 
 - **Minimalism**: No unnecessary bloat, with zero dependencies. Just the core essentials you need to build fast and reliable applications.
