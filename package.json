@@ -1,6 +1,6 @@
 {
   "name": "cpeak",
-  "version": "2.2.5",
+  "version": "2.2.6",
   "description": "A minimal and fast Node.js HTTP framework.",
   "type": "module",
   "main": "./lib/index.js",
@@ -28,5 +28,8 @@
   "devDependencies": {
     "mocha": "^10.7.3",
     "supertest": "^7.0.0"
+  },
+  "dependencies": {
+    "cpeak": "file:"
   }
 }
