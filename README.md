@@ -26,13 +26,16 @@ This is an educational project that was started as part of the [Understanding No
   - [Initializing](#initializing)
   - [Middleware](#middleware)
   - [Route Handling](#route-handling)
+  - [Route Middleware](#route-middleware)
   - [URL Variables & Parameters](#url-variables--parameters)
   - [Sending Files](#sending-files)
+  - [Redirecting](#redirecting)
   - [Error Handling](#error-handling)
   - [Listening](#listening)
   - [Util Functions](#util-functions)
     - [serveStatic](#servestatic)
     - [parseJSON](#parsejson)
+    - [render](#render)
 - [Complete Example](#complete-example)
 - [Versioning Notice](#versioning-notice)
 
@@ -116,6 +119,40 @@ server.beforeEach((req, res, next) => {
 });
 ```
 
+### Route Middleware
+
+You can also add middleware functions for a particular route handler like this:
+
+```javascript
+const requireAuth = (req, res, next, handleErr) => {
+  // Check if user is logged in, if so then:
+  req.test = "this is a test value";
+  next();
+
+  // If user is not logged in:
+  return handleErr({ status: 401, message: "Unauthorized" });
+};
+
+server.route("get", "/profile", requireAuth, (req, res, handleErr) => {
+  console.log(req.test); // this is a test value
+});
+```
+
+You can add as many middleware functions as you want for a route:
+
+```javascript
+server.route(
+  "get",
+  "/profile",
+  requireAuth,
+  anotherFunction,
+  oneMore,
+  (req, res, handleErr) => {
+    // your logic
+  }
+);
+```
+
 ### Route Handling
 
 You can add new routes like this:
@@ -161,9 +198,17 @@ server.route("get", "/testing", (req, res) => {
 
 The file’s binary content will be in the HTTP response body content. Make sure you specify a correct path relative to your CWD (use the `path` module for better compatibility) and also the correct HTTP MIME type for that file.
 
+### Redirecting
+
+If you want to redirect to a new URL, you can simply do:
+
+```javascript
+res.redirect("https://whatever.com");
+```
+
 ### Error Handling
 
-If anywhere in your route functions you want to return an error, it's cleaner to pass it to the `handleErr` function like this:
+If anywhere in your route functions or route middleware functions you want to return an error, it's cleaner to pass it to the `handleErr` function like this:
 
 ```javascript
 server.route("get", "/api/document/:title", (req, res, handleErr) => {
@@ -212,6 +257,7 @@ The list of utility functions as of now:
 
 - serveStatic
 - parseJSON
+- render
 
 Including any one of them is done like this:
 
@@ -271,12 +317,50 @@ server.route("put", "/api/user", (req, res) => {
 });
 ```
 
+#### render
+
+With this function you can do server side rendering before sending a file to a client. This can be useful for dynamic customization and search engine optimization.
+
+First fire it up like this:
+
+```javascript
+server.beforeEach(render());
+```
+
+And then for rendering:
+
+```javascript
+server.route("get", "/", (req, res, next) => {
+  return res.render(
+    "./public/index.html",
+    {
+      title: "Page title",
+      name: "Allan",
+    },
+    "text/html"
+  );
+});
+```
+
+You can then inject the variables into your file in {{ variable_name }} like this:
+
+```HTML
+<html>
+    <head>
+        <title>{{ title }}</title>
+    </head>
+    <body>
+        <h1>{{ name }}</h1>
+    </body>
+</html>
+```
+
 ## Complete Example
 
 Here you can see all the features that Cpeak offers, in one small piece of code:
 
 ```javascript
-import cpeak, { serveStatic, parseJSON } from "cpeak";
+import cpeak, { serveStatic, parseJSON, render } from "cpeak";
 
 const server = new cpeak();
 
@@ -285,6 +369,8 @@ server.beforeEach(
     mp3: "audio/mpeg",
   })
 );
+
+server.beforeEach(render());
 
 // For parsing JSON bodies
 server.beforeEach(parseJSON);
@@ -295,24 +381,55 @@ server.beforeEach((req, res, next) => {
   next();
 });
 
+// A middleware function that can be specified to run before some particular routes
+const testRouteMiddleware = (req, res, next, handleErr) => {
+  req.whatever = "some calculated value maybe";
+
+  if (req.vars.test !== "something special") {
+    return handleErr({ status: 400, message: "an error message" });
+  }
+
+  next();
+};
+
 // Adding route handlers
-server.route("get", "/api/document/:title", (req, res, handleErr) => {
-  // Reading URL variables
-  const title = req.vars.title;
-
-  // Reading URL parameters (like /users?filter=active)
-  const filter = req.params.filter;
-
-  // Reading JSON request body
-  const anything = req.body.anything;
-
-  // Handling errors
-  if (anything === "not-expected-thing")
-    return handleErr({ status: 400, message: "Invalid property." });
-
-  // Sending a JSON response
-  res.status(200).json({ message: "This is a test response" });
+server.route("get", "/", (req, res, next) => {
+  return res.render(
+    "<path-to-file-relative-to-cwd>",
+    {
+      test: "some testing value",
+      number: "2343242",
+    },
+    "<mime-type>"
+  );
 });
+
+server.route("get", "/old-url", testRouteMiddleware, (req, res, next) => {
+  return res.redirect("/new-url");
+});
+
+server.route(
+  "get",
+  "/api/document/:title",
+  testRouteMiddleware,
+  (req, res, handleErr) => {
+    // Reading URL variables
+    const title = req.vars.title;
+
+    // Reading URL parameters (like /users?filter=active)
+    const filter = req.params.filter;
+
+    // Reading JSON request body
+    const anything = req.body.anything;
+
+    // Handling errors
+    if (anything === "not-expected-thing")
+      return handleErr({ status: 400, message: "Invalid property." });
+
+    // Sending a JSON response
+    res.status(200).json({ message: "This is a test response" });
+  }
+);
 
 // Sending a file response
 server.route("get", "/file", (req, res) => {
