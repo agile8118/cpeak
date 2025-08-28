@@ -1,8 +1,12 @@
 import fs from "node:fs/promises";
+import type { CpeakRequest, CpeakResponse, Next } from "../types.js";
 
-function renderTemplate(templateStr, data) {
+function renderTemplate(
+  templateStr: string,
+  data: Record<string, unknown>
+): string {
   // Initialize variables
-  let result = [];
+  let result: (string | unknown)[] = [];
 
   let currentIndex = 0;
 
@@ -49,8 +53,12 @@ function renderTemplate(templateStr, data) {
 // @TODO: escape the string to prevent XSS
 // @TODO: add another {{{ }}} option to not escape the string
 const render = () => {
-  return function (req, res, next) {
-    res.render = async (path, data, mime) => {
+  return function (req: CpeakRequest, res: CpeakResponse, next: Next): void {
+    res.render = async (
+      path: string,
+      data: Record<string, unknown>,
+      mime: string
+    ) => {
       let fileStr = await fs.readFile(path, "utf-8");
       const finalStr = renderTemplate(fileStr, data);
       res.setHeader("Content-Type", mime);

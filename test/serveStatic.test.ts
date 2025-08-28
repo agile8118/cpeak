@@ -1,13 +1,13 @@
 import assert from "node:assert";
 import supertest from "supertest";
 import fs from "node:fs/promises";
-import cpeak, { serveStatic } from "../lib/index.js";
+import cpeak, { serveStatic } from "../lib/";
 
 const PORT = 7543;
 const request = supertest(`http://localhost:${PORT}`);
 
 describe("Serving static files with serveStatic", function () {
-  let server;
+  let server: cpeak;
 
   before(function (done) {
     server = new cpeak();

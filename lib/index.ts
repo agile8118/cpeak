@@ -1,18 +1,35 @@
-import http from "node:http";
+import http, { IncomingMessage, ServerResponse } from "node:http";
 import fs from "node:fs/promises";
 
-import { serveStatic, parseJSON, render } from "./utils/index.js";
+import { serveStatic, parseJSON, render } from "./utils";
+
+import type {
+  StringMap,
+  CpeakRequest,
+  CpeakResponse,
+  Middleware,
+  Handler,
+  RoutesMap,
+} from "./types";
 
 class Cpeak {
+  private server: http.Server;
+  private routes: RoutesMap;
+  private middleware: Middleware[];
+  private _handleErr?: (
+    err: unknown,
+    req: CpeakRequest,
+    res: CpeakResponse
+  ) => void;
+
   constructor() {
     this.server = http.createServer();
     this.routes = {};
     this.middleware = [];
-    this.handleErr;
 
-    this.server.on("request", (req, res) => {
+    this.server.on("request", (req: CpeakRequest, res: CpeakResponse) => {
       // Send a file back to the client
-      res.sendFile = async (path, mime) => {
+      res.sendFile = async (path: string, mime: string) => {
         const fileHandle = await fs.open(path, "r");
         const fileStream = fileHandle.createReadStream();
 
@@ -22,35 +39,41 @@ class Cpeak {
       };
 
       // Set the status code of the response
-      res.status = (code) => {
+      res.status = (code: number) => {
         res.statusCode = code;
         return res;
       };
 
       // Redirects to a new URL
-      res.redirect = (location) => {
+      res.redirect = (location: string) => {
         res.writeHead(302, { Location: location });
         res.end();
         return res;
       };
 
       // Send a json data back to the client (for small json data, less than the highWaterMark)
-      res.json = (data) => {
+      res.json = (data: any) => {
         // This is only good for bodies that their size is less than the highWaterMark value
         res.setHeader("Content-Type", "application/json");
         res.end(JSON.stringify(data));
       };
 
       // Get the url without the URL parameters
-      const urlWithoutParams = req.url.split("?")[0];
+      const urlWithoutParams = req.url?.split("?")[0];
 
       // Parse the URL parameters (like /users?key1=value1&key2=value2)
       // We put this here to also parse them for all the middleware functions
-      const params = new URLSearchParams(req.url.split("?")[1]);
+      const params = new URLSearchParams(req.url?.split("?")[1]);
       req.params = Object.fromEntries(params.entries());
 
       // Run all the specific middleware functions for that router only and then run the handler
-      const runHandler = (req, res, middleware, cb, index) => {
+      const runHandler = (
+        req: CpeakRequest,
+        res: CpeakResponse,
+        middleware: Middleware[],
+        cb: Handler,
+        index: number
+      ) => {
         // Our exit point...
         if (index === middleware.length) {
           // Call the route handler with the modified req and res objects.
@@ -58,20 +81,20 @@ class Cpeak {
           try {
             const handlerResult = cb(req, res, (error) => {
               res.setHeader("Connection", "close");
-              this.handleErr(error, req, res);
+              this._handleErr?.(error, req, res);
             });
 
             if (handlerResult && typeof handlerResult.then === "function") {
               handlerResult.catch((error) => {
                 res.setHeader("Connection", "close");
-                this.handleErr(error, req, res);
+                this._handleErr?.(error, req, res);
               });
             }
 
             return handlerResult;
           } catch (error) {
             res.setHeader("Connection", "close");
-            this.handleErr(error, req, res);
+            this._handleErr?.(error, req, res);
           }
         } else {
           middleware[index](
@@ -84,20 +107,25 @@ class Cpeak {
             // Error handler for a route middleware
             (error) => {
               res.setHeader("Connection", "close");
-              this.handleErr(error, req, res);
+              this._handleErr?.(error, req, res);
             }
           );
         }
       };
 
       // Run all the middleware functions (beforeEach functions) before we run the corresponding route
-      const runMiddleware = (req, res, middleware, index) => {
+      const runMiddleware = (
+        req: CpeakRequest,
+        res: CpeakResponse,
+        middleware: Middleware[],
+        index: number
+      ) => {
         // Our exit point...
         if (index === middleware.length) {
-          const routes = this.routes[req.method.toLowerCase()];
+          const routes = this.routes[req.method?.toLowerCase() || ""];
           if (routes && typeof routes[Symbol.iterator] === "function")
             for (const route of routes) {
-              const match = urlWithoutParams.match(route.regex);
+              const match = urlWithoutParams?.match(route.regex);
 
               if (match) {
                 // Parse the URL variables from the matched route (like /users/:id)
@@ -123,40 +151,44 @@ class Cpeak {
     });
   }
 
-  route(method, path, ...args) {
+  route(method: string, path: string, ...args: (Middleware | Handler)[]) {
     if (!this.routes[method]) this.routes[method] = [];
 
-    // The last argument is always our handler
+    // The last argument should always be our handler
     const cb = args.pop();
 
+    if (!cb || typeof cb !== "function") {
+      throw new Error("Route definition must include a handler");
+    }
+
     // Rest will be our middleware functions
-    const middleware = args.flat();
+    const middleware = args.flat() as Middleware[];
 
     const regex = this.#pathToRegex(path);
     this.routes[method].push({ path, regex, middleware, cb });
   }
 
-  beforeEach(cb) {
+  beforeEach(cb: Middleware) {
     this.middleware.push(cb);
   }
 
-  handleErr(cb) {
-    this.handleErr = cb;
+  handleErr(cb: (err: unknown, req: CpeakRequest, res: CpeakResponse) => void) {
+    this._handleErr = cb;
   }
 
-  listen(port, cb) {
+  listen(port: number, cb?: () => void) {
     this.server.listen(port, cb);
   }
 
-  close(cb) {
+  close(cb?: (err?: Error) => void) {
     this.server.close(cb);
   }
 
   // ------------------------------
   // PRIVATE METHODS:
   // ------------------------------
-  #pathToRegex(path) {
-    const varNames = [];
+  #pathToRegex(path: string) {
+    const varNames: string[] = [];
     const regexString =
       "^" +
       path.replace(/:\w+/g, (match, offset) => {
@@ -169,12 +201,12 @@ class Cpeak {
     return regex;
   }
 
-  #extractVars(path, match) {
+  #extractVars(path: string, match: RegExpMatchArray) {
     // Extract url variable values from the matched route
     const varNames = (path.match(/:\w+/g) || []).map((varParam) =>
       varParam.slice(1)
     );
-    const vars = {};
+    const vars: StringMap = {};
     varNames.forEach((name, index) => {
       vars[name] = match[index + 1];
     });

@@ -1,21 +1,27 @@
 import assert from "node:assert";
 import supertest from "supertest";
-import cpeak, { parseJSON } from "../lib/index.js";
+import cpeak, { parseJSON } from "../lib/";
+
+import type { CpeakRequest, CpeakResponse } from "../lib/types";
 
 const PORT = 7543;
 const request = supertest(`http://localhost:${PORT}`);
 
 describe("Parsing request bodies with parseJSON", function () {
-  let server;
+  let server: cpeak;
 
   before(function (done) {
     server = new cpeak();
 
     server.beforeEach(parseJSON);
 
-    server.route("post", "/do-something", (req, res) => {
-      res.status(205).json({ receivedData: req.body });
-    });
+    server.route(
+      "post",
+      "/do-something",
+      (req: CpeakRequest, res: CpeakResponse) => {
+        res.status(205).json({ receivedData: req.body });
+      }
+    );
 
     server.listen(PORT, done);
   });

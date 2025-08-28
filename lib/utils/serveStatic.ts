@@ -1,7 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
 
-const MIME_TYPES = {
+import type { StringMap, CpeakRequest, CpeakResponse, Next } from "../types.js";
+
+const MIME_TYPES: StringMap = {
   html: "text/html",
   css: "text/css",
   js: "application/javascript",
@@ -17,14 +19,14 @@ const MIME_TYPES = {
   woff2: "font/woff2",
 };
 
-const serveStatic = (folderPath, newMimeTypes) => {
+const serveStatic = (folderPath: string, newMimeTypes?: StringMap) => {
   // For new user defined mime types
   if (newMimeTypes) {
     Object.assign(MIME_TYPES, newMimeTypes);
   }
 
-  function processFolder(folderPath, parentFolder) {
-    const staticFiles = [];
+  function processFolder(folderPath: string, parentFolder: string) {
+    const staticFiles: string[] = [];
 
     // Read the contents of the folder
     const files = fs.readdirSync(folderPath);
@@ -49,8 +51,8 @@ const serveStatic = (folderPath, newMimeTypes) => {
     return staticFiles;
   }
 
-  const filesArrayToFilesMap = (filesArray) => {
-    const filesMap = {};
+  const filesArrayToFilesMap = (filesArray: string[]) => {
+    const filesMap: Record<string, { path: string; mime: string }> = {};
     for (const file of filesArray) {
       const fileExtension = path.extname(file).slice(1);
       filesMap[file] = {
@@ -64,13 +66,16 @@ const serveStatic = (folderPath, newMimeTypes) => {
   // Start processing the folder
   const filesMap = filesArrayToFilesMap(processFolder(folderPath, folderPath));
 
-  return function (req, res, next) {
-    if (filesMap.hasOwnProperty(req.url)) {
-      const fileRoute = filesMap[req.url];
+  return function (req: CpeakRequest, res: CpeakResponse, next: Next) {
+    const url = req.url;
+    if (typeof url !== "string") return next();
+
+    if (Object.prototype.hasOwnProperty.call(filesMap, url)) {
+      const fileRoute = filesMap[url];
       return res.sendFile(fileRoute.path, fileRoute.mime);
-    } else {
-      next();
     }
+
+    next();
   };
 };
 

@@ -2,3 +2,5 @@
 private.txt
 node_modules
 playground.js
+dist
+.vscode

@@ -1,12 +1,14 @@
 import assert from "node:assert";
 import supertest from "supertest";
-import cpeak from "../lib/index.js";
+import cpeak from "../lib/";
+
+import type { CpeakRequest, CpeakResponse } from "../lib/types";
 
 const PORT = 7543;
 const request = supertest(`http://localhost:${PORT}`);
 
 describe("Middleware functions", function () {
-  let server;
+  let server: cpeak;
 
   before(function (done) {
     server = new cpeak();
@@ -33,13 +35,17 @@ describe("Middleware functions", function () {
       next();
     });
 
-    server.route("get", "/bar", (req, res) => {
+    server.route("get", "/bar", (req: CpeakRequest, res: CpeakResponse) => {
       res.status(200).json({ message: req.foo });
     });
 
-    server.route("get", "/bar-more", (req, res) => {
-      res.unauthorized().json({});
-    });
+    server.route(
+      "get",
+      "/bar-more",
+      (req: CpeakRequest, res: CpeakResponse) => {
+        res.unauthorized().json({});
+      }
+    );
 
     server.listen(PORT, done);
   });

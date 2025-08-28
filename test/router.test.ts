@@ -1,27 +1,33 @@
 import assert from "node:assert";
 import supertest from "supertest";
-import cpeak from "../lib/index.js";
+import cpeak from "../lib/";
+
+import type { CpeakRequest, CpeakResponse } from "../lib/types";
 
 const PORT = 7543;
 const request = supertest(`http://localhost:${PORT}`);
 
 describe("General route logic & URL variables and parameters", function () {
-  let server;
+  let server: cpeak;
 
   before(function (done) {
     server = new cpeak();
 
-    server.route("get", "/hello", (req, res) => {
+    server.route("get", "/hello", (req: CpeakRequest, res: CpeakResponse) => {
       res.status(200).json({ message: "Hello, World!" });
     });
 
-    server.route("get", "/document/:title/more/:another/final", (req, res) => {
-      const title = req.vars.title;
-      const another = req.vars.another;
-      const params = req.params;
+    server.route(
+      "get",
+      "/document/:title/more/:another/final",
+      (req: CpeakRequest, res: CpeakResponse) => {
+        const title = req.vars?.title;
+        const another = req.vars?.another;
+        const params = req.params;
 
-      res.status(200).json({ title, another, params });
-    });
+        res.status(200).json({ title, another, params });
+      }
+    );
 
     server.listen(PORT, done);
   });
