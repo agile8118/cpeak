@@ -1,4 +1,5 @@
 import fs from "node:fs/promises";
+import { frameworkError } from "../";
 import type { CpeakRequest, CpeakResponse, Next } from "../types.js";
 
 function renderTemplate(
@@ -59,6 +60,14 @@ const render = () => {
       data: Record<string, unknown>,
       mime: string
     ) => {
+      // check if mime is specified, if not return an error
+      if (!mime) {
+        throw frameworkError(
+          `MIME type is missing. You called res.render("${path}", ...) but forgot to provide the third "mime" argument.`,
+          res.render
+        );
+      }
+
       let fileStr = await fs.readFile(path, "utf-8");
       const finalStr = renderTemplate(fileStr, data);
       res.setHeader("Content-Type", mime);

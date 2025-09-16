@@ -22,8 +22,14 @@ export type Next = (err?: any) => void;
 export type HandleErr = (err: any) => void;
 
 // beforeEach middleware: (req, res, next)
-// Route middleware:      (req, res, next, handleErr)
 export type Middleware = (
+  req: CpeakRequest,
+  res: CpeakResponse,
+  next: Next
+) => void;
+
+// Route middleware:      (req, res, next, handleErr)
+export type RouteMiddleware = (
   req: CpeakRequest,
   res: CpeakResponse,
   next: Next,
@@ -41,7 +47,7 @@ export type Handler = (
 export interface Route {
   path: string;
   regex: RegExp;
-  middleware: Middleware[];
+  middleware: RouteMiddleware[];
   cb: Handler;
 }
 
