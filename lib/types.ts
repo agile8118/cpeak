@@ -27,7 +27,7 @@ export type Middleware = (
   req: CpeakRequest,
   res: CpeakResponse,
   next: Next,
-  handleErr?: HandleErr
+  handleErr: HandleErr
 ) => void;
 
 // Route handlers: (req, res, handleErr)

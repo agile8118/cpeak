@@ -14,11 +14,29 @@ describe("Error handling with handleErr", function () {
   before(function (done) {
     server = new cpeak();
 
+    const mid1 = (
+      req: CpeakRequest,
+      res: CpeakResponse,
+      next: () => void,
+      handleErr: HandleErr
+    ) => {
+      const value = req.params.value;
+
+      if (value === "random")
+        return handleErr({ status: 401, message: "another error msg" });
+
+      next();
+    };
+
     server.route(
       "patch",
       "/foo/:bar",
+      mid1,
       (req: CpeakRequest, res: CpeakResponse, handleErr: HandleErr) => {
         const bar = req.vars?.bar;
+
+        console.log("-----");
+        console.log(bar);
 
         if (bar === "random") {
           return handleErr({ status: 403, message: "an error msg" });
@@ -43,5 +61,11 @@ describe("Error handling with handleErr", function () {
     const res = await request.patch("/foo/random");
     assert.strictEqual(res.status, 403);
     assert.deepStrictEqual(res.body, { error: "an error msg" });
+  });
+
+  it("should get an error using the handleErr function from a middleware", async function () {
+    const res = await request.patch("/foo/random?value=random");
+    assert.strictEqual(res.status, 401);
+    assert.deepStrictEqual(res.body, { error: "another error msg" });
   });
 });
