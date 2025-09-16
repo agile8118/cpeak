@@ -8,9 +8,17 @@ import type {
   CpeakRequest,
   CpeakResponse,
   Middleware,
+  RouteMiddleware,
   Handler,
   RoutesMap,
 } from "./types";
+
+// A utility function to create an error with a custom stack trace
+export function frameworkError(message: string, skipFn: Function) {
+  const err = new Error(message);
+  Error.captureStackTrace(err, skipFn);
+  return err;
+}
 
 class Cpeak {
   private server: http.Server;
@@ -70,7 +78,7 @@ class Cpeak {
       const runHandler = (
         req: CpeakRequest,
         res: CpeakResponse,
-        middleware: Middleware[],
+        middleware: RouteMiddleware[],
         cb: Handler,
         index: number
       ) => {
@@ -151,18 +159,18 @@ class Cpeak {
     });
   }
 
-  route(method: string, path: string, ...args: (Middleware | Handler)[]) {
+  route(method: string, path: string, ...args: (RouteMiddleware | Handler)[]) {
     if (!this.routes[method]) this.routes[method] = [];
 
     // The last argument should always be our handler
-    const cb = args.pop();
+    const cb = args.pop() as Handler;
 
     if (!cb || typeof cb !== "function") {
       throw new Error("Route definition must include a handler");
     }
 
     // Rest will be our middleware functions
-    const middleware = args.flat() as Middleware[];
+    const middleware = args.flat() as RouteMiddleware[];
 
     const regex = this.#pathToRegex(path);
     this.routes[method].push({ path, regex, middleware, cb });
@@ -214,6 +222,7 @@ class Cpeak {
   }
 }
 
+// Util functions
 export { serveStatic, parseJSON, render };
 
 export default Cpeak;
