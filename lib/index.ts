@@ -1,5 +1,7 @@
-import http, { IncomingMessage, ServerResponse } from "node:http";
+import http from "node:http";
 import fs from "node:fs/promises";
+import { createReadStream } from "node:fs";
+import { pipeline } from "node:stream/promises";
 
 import { serveStatic, parseJSON, render } from "./utils";
 
@@ -14,10 +16,24 @@ import type {
 } from "./types";
 
 // A utility function to create an error with a custom stack trace
-export function frameworkError(message: string, skipFn: Function) {
-  const err = new Error(message);
+export function frameworkError(
+  message: string,
+  skipFn: Function,
+  code?: string
+) {
+  const err = new Error(message) as Error & { code?: string };
   Error.captureStackTrace(err, skipFn);
+
+  if (code) err.code = code;
+
   return err;
+}
+
+export enum ErrorCode {
+  MISSING_MIME = "CPEAK_ERR_MISSING_MIME",
+  FILE_NOT_FOUND = "CPEAK_ERR_FILE_NOT_FOUND",
+  NOT_A_FILE = "CPEAK_ERR_NOT_A_FILE",
+  SEND_FILE_FAIL = "CPEAK_ERR_SEND_FILE_FAIL",
 }
 
 class Cpeak {
@@ -38,12 +54,44 @@ class Cpeak {
     this.server.on("request", (req: CpeakRequest, res: CpeakResponse) => {
       // Send a file back to the client
       res.sendFile = async (path: string, mime: string) => {
-        const fileHandle = await fs.open(path, "r");
-        const fileStream = fileHandle.createReadStream();
+        if (!mime) {
+          throw frameworkError(
+            'MIME type is missing. Use res.sendFile(path, "mime-type").',
+            res.sendFile,
+            ErrorCode.MISSING_MIME
+          );
+        }
 
-        res.setHeader("Content-Type", mime);
+        try {
+          const stat = await fs.stat(path);
+          if (!stat.isFile()) {
+            throw frameworkError(
+              `Not a file: ${path}`,
+              res.sendFile,
+              ErrorCode.NOT_A_FILE
+            );
+          }
 
-        fileStream.pipe(res);
+          res.setHeader("Content-Type", mime);
+          res.setHeader("Content-Length", String(stat.size));
+
+          // Properly propagate stream errors and respect backpressure
+          await pipeline(createReadStream(path), res);
+        } catch (err: any) {
+          if (err?.code === "ENOENT") {
+            throw frameworkError(
+              `File not found: ${path}`,
+              res.sendFile,
+              ErrorCode.FILE_NOT_FOUND
+            );
+          }
+
+          throw frameworkError(
+            `Failed to send file: ${path}`,
+            res.sendFile,
+            ErrorCode.SEND_FILE_FAIL
+          );
+        }
       };
 
       // Set the status code of the response
@@ -185,7 +233,7 @@ class Cpeak {
   }
 
   listen(port: number, cb?: () => void) {
-    this.server.listen(port, cb);
+    return this.server.listen(port, cb);
   }
 
   close(cb?: (err?: Error) => void) {
@@ -224,5 +272,17 @@ class Cpeak {
 
 // Util functions
 export { serveStatic, parseJSON, render };
+
+export type {
+  Cpeak,
+  CpeakRequest,
+  CpeakResponse,
+  Next,
+  HandleErr,
+  Middleware,
+  RouteMiddleware,
+  Handler,
+  RoutesMap,
+} from "./types";
 
 export default Cpeak;

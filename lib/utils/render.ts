@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
 import { frameworkError } from "../";
-import type { CpeakRequest, CpeakResponse, Next } from "../types.js";
+import type { CpeakRequest, CpeakResponse, Next } from "../types";
 
 function renderTemplate(
   templateStr: string,

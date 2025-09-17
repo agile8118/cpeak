@@ -1,4 +1,7 @@
 import { IncomingMessage, ServerResponse } from "node:http";
+import CpeakClass from "./index";
+
+export type Cpeak = InstanceType<typeof CpeakClass>;
 
 // Extending Node.js's Request and Response objects to add our custom properties
 export type StringMap = Record<string, string>;
@@ -18,7 +21,7 @@ export interface CpeakResponse extends ServerResponse {
   [key: string]: any; // allow developers to add their onw extensions (e.g. res.test)
 }
 
-export type Next = (err?: any) => void;
+export type Next = () => void;
 export type HandleErr = (err: any) => void;
 
 // beforeEach middleware: (req, res, next)
@@ -34,7 +37,7 @@ export type RouteMiddleware = (
   res: CpeakResponse,
   next: Next,
   handleErr: HandleErr
-) => void;
+) => void | Promise<void>;
 
 // Route handlers: (req, res, handleErr)
 export type Handler = (

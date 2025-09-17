@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import type { StringMap, CpeakRequest, CpeakResponse, Next } from "../types.js";
+import type { StringMap, CpeakRequest, CpeakResponse, Next } from "../types";
 
 const MIME_TYPES: StringMap = {
   html: "text/html",
