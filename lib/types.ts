@@ -11,6 +11,9 @@ export interface CpeakRequest extends IncomingMessage {
   vars?: StringMap;
   body?: unknown;
   [key: string]: any; // allow developers to add their onw extensions (e.g. req.test)
+
+  // For express frameworks compatibility:
+  query: StringMap;
 }
 
 export interface CpeakResponse extends ServerResponse {
@@ -21,7 +24,7 @@ export interface CpeakResponse extends ServerResponse {
   [key: string]: any; // allow developers to add their onw extensions (e.g. res.test)
 }
 
-export type Next = () => void;
+export type Next = (err?: any) => void;
 export type HandleErr = (err: any) => void;
 
 // beforeEach middleware: (req, res, next)

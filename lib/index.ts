@@ -120,7 +120,11 @@ class Cpeak {
       // Parse the URL parameters (like /users?key1=value1&key2=value2)
       // We put this here to also parse them for all the middleware functions
       const params = new URLSearchParams(req.url?.split("?")[1]);
-      req.params = Object.fromEntries(params.entries());
+
+      const paramsObject = Object.fromEntries(params.entries());
+
+      req.params = paramsObject;
+      req.query = paramsObject; // only for compatibility with frameworks built for express
 
       // Run all the specific middleware functions for that router only and then run the handler
       const runHandler = (
@@ -157,7 +161,12 @@ class Cpeak {
             req,
             res,
             // The next function
-            () => {
+            (error) => {
+              // this function only accepts an error argument to be more compatible with NPM modules that are built for express
+              if (error) {
+                res.setHeader("Connection", "close");
+                return this._handleErr?.(error, req, res);
+              }
               runHandler(req, res, middleware, cb, index + 1);
             },
             // Error handler for a route middleware
