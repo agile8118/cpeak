@@ -6,14 +6,15 @@ export type Cpeak = InstanceType<typeof CpeakClass>;
 // Extending Node.js's Request and Response objects to add our custom properties
 export type StringMap = Record<string, string>;
 
-export interface CpeakRequest extends IncomingMessage {
-  params: StringMap;
+export interface CpeakRequest<ReqBody = any, ReqParams = any>
+  extends IncomingMessage {
+  params: ReqParams;
   vars?: StringMap;
-  body?: unknown;
+  body?: ReqBody;
   [key: string]: any; // allow developers to add their onw extensions (e.g. req.test)
 
   // For express frameworks compatibility:
-  query: StringMap;
+  query: ReqParams;
 }
 
 export interface CpeakResponse extends ServerResponse {
@@ -28,23 +29,23 @@ export type Next = (err?: any) => void;
 export type HandleErr = (err: any) => void;
 
 // beforeEach middleware: (req, res, next)
-export type Middleware = (
-  req: CpeakRequest,
+export type Middleware<ReqBody = any, ReqParams = any> = (
+  req: CpeakRequest<ReqBody, ReqParams>,
   res: CpeakResponse,
   next: Next
 ) => void;
 
 // Route middleware:      (req, res, next, handleErr)
-export type RouteMiddleware = (
-  req: CpeakRequest,
+export type RouteMiddleware<ReqBody = any, ReqParams = any> = (
+  req: CpeakRequest<ReqBody, ReqParams>,
   res: CpeakResponse,
   next: Next,
   handleErr: HandleErr
 ) => void | Promise<void>;
 
 // Route handlers: (req, res, handleErr)
-export type Handler = (
-  req: CpeakRequest,
+export type Handler<ReqBody = any, ReqParams = any> = (
+  req: CpeakRequest<ReqBody, ReqParams>,
   res: CpeakResponse,
   handleErr: HandleErr
 ) => void | Promise<void>;
