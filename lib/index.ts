@@ -157,24 +157,41 @@ class Cpeak {
             this._handleErr?.(error, req, res);
           }
         } else {
-          middleware[index](
-            req,
-            res,
-            // The next function
-            (error) => {
-              // this function only accepts an error argument to be more compatible with NPM modules that are built for express
-              if (error) {
+          // Handle the promise errors by passing them to the handleErr to save developers from having to manually wrap every handler middleware in try catch.
+          try {
+            const middlewareResult = middleware[index](
+              req,
+              res,
+              // The next function
+              (error) => {
+                // this function only accepts an error argument to be more compatible with NPM modules that are built for express
+                if (error) {
+                  res.setHeader("Connection", "close");
+                  return this._handleErr?.(error, req, res);
+                }
+                runHandler(req, res, middleware, cb, index + 1);
+              },
+              // Error handler for a route middleware
+              (error) => {
                 res.setHeader("Connection", "close");
-                return this._handleErr?.(error, req, res);
+                this._handleErr?.(error, req, res);
               }
-              runHandler(req, res, middleware, cb, index + 1);
-            },
-            // Error handler for a route middleware
-            (error) => {
-              res.setHeader("Connection", "close");
-              this._handleErr?.(error, req, res);
+            );
+
+            // If the middleware is async, handle the promise rejection
+            if (
+              middlewareResult &&
+              typeof middlewareResult.then === "function"
+            ) {
+              middlewareResult.catch((error) => {
+                res.setHeader("Connection", "close");
+                this._handleErr?.(error, req, res);
+              });
             }
-          );
+          } catch (error) {
+            res.setHeader("Connection", "close");
+            this._handleErr?.(error, req, res);
+          }
         }
       };
 
