@@ -1,7 +1,7 @@
 import { IncomingMessage, ServerResponse } from "node:http";
-import CpeakClass from "./index";
+import cpeak from "./index";
 
-export type Cpeak = InstanceType<typeof CpeakClass>;
+export type Cpeak = ReturnType<typeof cpeak>;
 
 // Extending Node.js's Request and Response objects to add our custom properties
 export type StringMap = Record<string, string>;

@@ -3,8 +3,6 @@ import fs from "node:fs/promises";
 import { createReadStream } from "node:fs";
 import { pipeline } from "node:stream/promises";
 
-import { serveStatic, parseJSON, render } from "./utils";
-
 import type {
   StringMap,
   CpeakRequest,
@@ -297,7 +295,9 @@ class Cpeak {
 }
 
 // Util functions
-export { serveStatic, parseJSON, render };
+export { serveStatic } from "./utils/serveStatic.js";
+export { parseJSON } from "./utils/parseJSON.js";
+export { render } from "./utils/render.js";
 
 export type {
   Cpeak,
@@ -311,4 +311,6 @@ export type {
   RoutesMap,
 } from "./types";
 
-export default Cpeak;
+export default function cpeak() {
+  return new Cpeak();
+}

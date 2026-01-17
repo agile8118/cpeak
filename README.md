@@ -8,8 +8,6 @@ This project is designed to be improved until it's ready for use in complex prod
 
 This is an educational project that was started as part of the [Understanding Node.js: Core Concepts](https://www.udemy.com/course/understanding-nodejs-core-concepts/?referralCode=0BC21AC4DD6958AE6A95) course. If you want to learn how to build a framework like this, and get to a point where you can build things like this yourself, check out this course!
 
-<em>This is the current demo, and the development of the project will begin starting from **September 2025.**</em>
-
 ## Why Cpeak?
 
 - **Minimalism**: No unnecessary bloat, with zero dependencies. Just the core essentials you need to build fast and reliable applications.
@@ -54,7 +52,7 @@ Cpeak is a **pure ESM** package, and to use it, your project needs to be an ESM 
 ```javascript
 import cpeak from "cpeak";
 
-const server = new cpeak();
+const server = cpeak();
 
 server.route("get", "/", (req, res) => {
   res.json({ message: "Hi there!" });
@@ -86,7 +84,7 @@ import cpeak, { serveStatic, parseJSON } from "cpeak";
 Initialize the Cpeak server like this:
 
 ```javascript
-const server = new cpeak();
+const server = cpeak();
 ```
 
 Now you can use this server object to start listening, add route logic, add middleware functions, and handle errors.
@@ -362,7 +360,7 @@ Here you can see all the features that Cpeak offers, in one small piece of code:
 ```javascript
 import cpeak, { serveStatic, parseJSON, render } from "cpeak";
 
-const server = new cpeak();
+const server = cpeak();
 
 server.beforeEach(
   serveStatic("./public", {
