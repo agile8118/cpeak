@@ -49,7 +49,7 @@ class Cpeak {
     this.routes = {};
     this.middleware = [];
 
-    this.server.on("request", (req: CpeakRequest, res: CpeakResponse) => {
+    this.server.on("request", async (req: CpeakRequest, res: CpeakResponse) => {
       // Send a file back to the client
       res.sendFile = async (path: string, mime: string) => {
         if (!mime) {
@@ -125,7 +125,7 @@ class Cpeak {
       req.query = paramsObject; // only for compatibility with frameworks built for express
 
       // Run all the specific middleware functions for that router only and then run the handler
-      const runHandler = (
+      const runHandler = async (
         req: CpeakRequest,
         res: CpeakResponse,
         middleware: RouteMiddleware[],
@@ -137,19 +137,10 @@ class Cpeak {
           // Call the route handler with the modified req and res objects.
           // Also handle the promise errors by passing them to the handleErr to save developers from having to manually wrap every handler in try catch.
           try {
-            const handlerResult = cb(req, res, (error) => {
+            await cb(req, res, (error) => {
               res.setHeader("Connection", "close");
               this._handleErr?.(error, req, res);
             });
-
-            if (handlerResult && typeof handlerResult.then === "function") {
-              handlerResult.catch((error) => {
-                res.setHeader("Connection", "close");
-                this._handleErr?.(error, req, res);
-              });
-            }
-
-            return handlerResult;
           } catch (error) {
             res.setHeader("Connection", "close");
             this._handleErr?.(error, req, res);
@@ -157,17 +148,17 @@ class Cpeak {
         } else {
           // Handle the promise errors by passing them to the handleErr to save developers from having to manually wrap every handler middleware in try catch.
           try {
-            const middlewareResult = middleware[index](
+            await middleware[index](
               req,
               res,
               // The next function
-              (error) => {
+              async (error) => {
                 // this function only accepts an error argument to be more compatible with NPM modules that are built for express
                 if (error) {
                   res.setHeader("Connection", "close");
                   return this._handleErr?.(error, req, res);
                 }
-                runHandler(req, res, middleware, cb, index + 1);
+                await runHandler(req, res, middleware, cb, index + 1);
               },
               // Error handler for a route middleware
               (error) => {
@@ -175,17 +166,6 @@ class Cpeak {
                 this._handleErr?.(error, req, res);
               }
             );
-
-            // If the middleware is async, handle the promise rejection
-            if (
-              middlewareResult &&
-              typeof middlewareResult.then === "function"
-            ) {
-              middlewareResult.catch((error) => {
-                res.setHeader("Connection", "close");
-                this._handleErr?.(error, req, res);
-              });
-            }
           } catch (error) {
             res.setHeader("Connection", "close");
             this._handleErr?.(error, req, res);
@@ -194,7 +174,7 @@ class Cpeak {
       };
 
       // Run all the middleware functions (beforeEach functions) before we run the corresponding route
-      const runMiddleware = (
+      const runMiddleware = async (
         req: CpeakRequest,
         res: CpeakResponse,
         middleware: Middleware[],
@@ -212,7 +192,13 @@ class Cpeak {
                 const vars = this.#extractVars(route.path, match);
                 req.vars = vars;
 
-                return runHandler(req, res, route.middleware, route.cb, 0);
+                return await runHandler(
+                  req,
+                  res,
+                  route.middleware,
+                  route.cb,
+                  0
+                );
               }
             }
 
@@ -221,13 +207,18 @@ class Cpeak {
             .status(404)
             .json({ error: `Cannot ${req.method} ${urlWithoutParams}` });
         } else {
-          middleware[index](req, res, () => {
-            runMiddleware(req, res, middleware, index + 1);
-          });
+          try {
+            await middleware[index](req, res, async () => {
+              await runMiddleware(req, res, middleware, index + 1);
+            });
+          } catch (error) {
+            res.setHeader("Connection", "close");
+            this._handleErr?.(error, req, res);
+          }
         }
       };
 
-      runMiddleware(req, res, this.middleware, 0);
+      await runMiddleware(req, res, this.middleware, 0);
     });
   }
 
