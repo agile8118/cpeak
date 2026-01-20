@@ -6,15 +6,15 @@ export type Cpeak = ReturnType<typeof cpeak>;
 // Extending Node.js's Request and Response objects to add our custom properties
 export type StringMap = Record<string, string>;
 
-export interface CpeakRequest<ReqBody = any, ReqParams = any>
-  extends IncomingMessage {
-  params: ReqParams;
-  vars?: StringMap;
+export interface CpeakRequest<
+  ReqBody = any,
+  ReqQueries = any
+> extends IncomingMessage {
+  params: StringMap;
+  query: ReqQueries;
+  // vars?: StringMap;
   body?: ReqBody;
   [key: string]: any; // allow developers to add their onw extensions (e.g. req.test)
-
-  // For express frameworks compatibility:
-  query: ReqParams;
 }
 
 export interface CpeakResponse extends ServerResponse {
