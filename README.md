@@ -229,7 +229,7 @@ server.handleErr((error, req, res) => {
     // Log the unexpected errors somewhere so you can keep track of them...
     console.error(error);
     res.status(500).json({
-      error: "Sorry, something unexpected happened on our side.",
+      error: "Sorry, something unexpected happened on our side."
     });
   }
 });
@@ -270,7 +270,7 @@ With this middleware function, you can automatically set a folder in your projec
 ```javascript
 server.beforeEach(
   serveStatic("./public", {
-    mp3: "audio/mpeg",
+    mp3: "audio/mpeg"
   })
 );
 ```
@@ -298,7 +298,9 @@ If you have file types in your public folder that are not one of the following, 
 With this middleware function, you can easily read and send JSON in HTTP message bodies in route and middleware functions. Fire it up like this:
 
 ```javascript
-server.beforeEach(parseJSON);
+// You can pass an optional limit option to indicate the maximum
+// JSON body size that your server will accept.
+server.beforeEach(parseJSON({ limit: 1024 * 1024 })); // default value is 1024 * 1024 (1MB)
 ```
 
 Read and send JSON from HTTP messages like this:
@@ -333,7 +335,7 @@ server.route("get", "/", (req, res, next) => {
     "./public/index.html",
     {
       title: "Page title",
-      name: "Allan",
+      name: "Allan"
     },
     "text/html"
   );
@@ -364,14 +366,14 @@ const server = cpeak();
 
 server.beforeEach(
   serveStatic("./public", {
-    mp3: "audio/mpeg",
+    mp3: "audio/mpeg"
   })
 );
 
 server.beforeEach(render());
 
 // For parsing JSON bodies
-server.beforeEach(parseJSON);
+server.beforeEach(parseJSON());
 
 // Adding custom middleware functions
 server.beforeEach((req, res, next) => {
@@ -396,7 +398,7 @@ server.route("get", "/", (req, res, next) => {
     "<path-to-file-relative-to-cwd>",
     {
       test: "some testing value",
-      number: "2343242",
+      number: "2343242"
     },
     "<mime-type>"
   );
@@ -442,7 +444,7 @@ server.handleErr((error, req, res) => {
   } else {
     console.error(error);
     res.status(500).json({
-      error: "Sorry, something unexpected happened from our side.",
+      error: "Sorry, something unexpected happened from our side."
     });
   }
 });
