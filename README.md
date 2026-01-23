@@ -131,7 +131,7 @@ const requireAuth = (req, res, next, handleErr) => {
   return handleErr({ status: 401, message: "Unauthorized" });
 };
 
-server.route("get", "/profile", requireAuth, (req, res, handleErr) => {
+server.route("get", "/profile", requireAuth, (req, res) => {
   console.log(req.test); // this is a test value
 });
 ```
@@ -145,7 +145,7 @@ server.route(
   requireAuth,
   anotherFunction,
   oneMore,
-  (req, res, handleErr) => {
+  (req, res) => {
     // your logic
   }
 );
@@ -165,16 +165,15 @@ First add the HTTP method name you want to handle, then the path, and finally, t
 
 ### URL Variables & Parameters
 
-Since in HTTP these are called URL parameters: `/path?key1=value1&key2=value2&foo=900`, in Cpeak, we also call them `params` (short for HTTP URL parameters).
-We can also do custom path management, and we call them `vars` (short for URL variables).
+To be more consistent with the broader Node.js community and frameworks, we call the HTTP URL parameters (query strings) '**query**', and the path variables (route parameters) '**params**'.
 
 Here’s how we can read both:
 
 ```javascript
 // Imagine request URL is example.com/test/my-title/more-text?filter=newest
 server.route("patch", "/test/:title/more-text", (req, res) => {
-  const title = req.vars.title;
-  const filter = req.params.filter;
+  const title = req.params.title;
+  const filter = req.query.filter;
 
   console.log(title); // my-title
   console.log(filter); // newest
@@ -206,11 +205,23 @@ res.redirect("https://whatever.com");
 
 ### Error Handling
 
-If anywhere in your route functions or route middleware functions you want to return an error, it's cleaner to pass it to the `handleErr` function like this:
+If anywhere in your route functions or route middleware functions you want to return an error, you can just throw the error and let the automatic error handler catch it:
+
+```javascript
+server.route("get", "/api/document/:title", (req, res) => {
+  const title = req.params.title;
+
+  if (title.length > 500) throw { status: 400, message: "Title too long." };
+
+  // The rest of your logic...
+});
+```
+
+You can also make use of the `handleErr` callback function like this:
 
 ```javascript
 server.route("get", "/api/document/:title", (req, res, handleErr) => {
-  const title = req.vars.title;
+  const title = req.params.title;
 
   if (title.length > 500)
     return handleErr({ status: 400, message: "Title too long." });
@@ -219,7 +230,7 @@ server.route("get", "/api/document/:title", (req, res, handleErr) => {
 });
 ```
 
-And then handle all the errors like this in the `handleErr` callback:
+**Make sure** to call the `server.handleErr` and pass a function like this to have the automatic error handler work properly:
 
 ```javascript
 server.handleErr((error, req, res) => {
@@ -235,7 +246,7 @@ server.handleErr((error, req, res) => {
 });
 ```
 
-The error object is the object that you passed to the `handleErr` function earlier in your routes.
+_The error object is the object that you threw or passed to the `handleErr` function earlier in your routes._
 
 ### Listening
 
@@ -385,7 +396,7 @@ server.beforeEach((req, res, next) => {
 const testRouteMiddleware = (req, res, next, handleErr) => {
   req.whatever = "some calculated value maybe";
 
-  if (req.vars.test !== "something special") {
+  if (req.params.test !== "something special") {
     return handleErr({ status: 400, message: "an error message" });
   }
 
@@ -408,28 +419,23 @@ server.route("get", "/old-url", testRouteMiddleware, (req, res, next) => {
   return res.redirect("/new-url");
 });
 
-server.route(
-  "get",
-  "/api/document/:title",
-  testRouteMiddleware,
-  (req, res, handleErr) => {
-    // Reading URL variables
-    const title = req.vars.title;
+server.route("get", "/api/document/:title", testRouteMiddleware, (req, res) => {
+  // Reading URL variables (route parameters)
+  const title = req.params.title;
 
-    // Reading URL parameters (like /users?filter=active)
-    const filter = req.params.filter;
+  // Reading URL parameters (query strings) (like /users?filter=active)
+  const filter = req.query.filter;
 
-    // Reading JSON request body
-    const anything = req.body.anything;
+  // Reading JSON request body
+  const anything = req.body.anything;
 
-    // Handling errors
-    if (anything === "not-expected-thing")
-      return handleErr({ status: 400, message: "Invalid property." });
+  // Handling errors
+  if (anything === "not-expected-thing")
+    throw { status: 400, message: "Invalid property." };
 
-    // Sending a JSON response
-    res.status(200).json({ message: "This is a test response" });
-  }
-);
+  // Sending a JSON response
+  res.status(200).json({ message: "This is a test response" });
+});
 
 // Sending a file response
 server.route("get", "/file", (req, res) => {

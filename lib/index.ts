@@ -157,9 +157,9 @@ class Cpeak {
     this.middleware = [];
 
     this.server.on("request", async (req: CpeakRequest, res: CpeakResponse) => {
-      // Get the url without the URL parameters
+      // Get the url without the URL parameters (query strings)
       const qIndex = req.url?.indexOf("?");
-      const urlWithoutParams =
+      const urlWithoutQueries =
         qIndex === -1 ? req.url || "" : req.url?.substring(0, qIndex);
 
       // Run all the specific middleware functions for that router only and then run the handler
@@ -223,7 +223,7 @@ class Cpeak {
           const routes = this.routes[req.method?.toLowerCase() || ""];
           if (routes && typeof routes[Symbol.iterator] === "function")
             for (const route of routes) {
-              const match = urlWithoutParams?.match(route.regex);
+              const match = urlWithoutQueries?.match(route.regex);
 
               if (match) {
                 // Parse the URL path variables from the matched route (like /users/:id)
@@ -248,7 +248,7 @@ class Cpeak {
           // If the requested route dose not exist, return 404
           return res
             .status(404)
-            .json({ error: `Cannot ${req.method} ${urlWithoutParams}` });
+            .json({ error: `Cannot ${req.method} ${urlWithoutQueries}` });
         } else {
           try {
             await middleware[index](req, res, async (err?: unknown) => {
@@ -306,11 +306,11 @@ class Cpeak {
   // PRIVATE METHODS:
   // ------------------------------
   #pathToRegex(path: string) {
-    const varNames: string[] = [];
+    const paramNames: string[] = [];
     const regexString =
       "^" +
       path.replace(/:\w+/g, (match, offset) => {
-        varNames.push(match.slice(1));
+        paramNames.push(match.slice(1));
         return "([^/]+)";
       }) +
       "$";
@@ -321,14 +321,14 @@ class Cpeak {
 
   #extractPathVariables(path: string, match: RegExpMatchArray) {
     // Extract path url variable values from the matched route
-    const varNames = (path.match(/:\w+/g) || []).map((varParam) =>
-      varParam.slice(1)
+    const paramNames = (path.match(/:\w+/g) || []).map((param) =>
+      param.slice(1)
     );
-    const vars: StringMap = {};
-    varNames.forEach((name, index) => {
-      vars[name] = match[index + 1];
+    const params: StringMap = {};
+    paramNames.forEach((name, index) => {
+      params[name] = match[index + 1];
     });
-    return vars;
+    return params;
   }
 }
 
