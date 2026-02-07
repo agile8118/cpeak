@@ -6,37 +6,45 @@ export type Cpeak = ReturnType<typeof cpeak>;
 // Extending Node.js's Request and Response objects to add our custom properties
 export type StringMap = Record<string, string>;
 
+// Error type for Cpeak framework errors
+export type CpeakError = Error & {
+  status?: number;
+  code?: string;
+  cpeak_err?: boolean;
+};
+
 export interface CpeakRequest<
-  ReqBody = any,
-  ReqQueries = any
+  ReqBody = unknown,
+  ReqQueries = unknown
 > extends IncomingMessage {
   params: StringMap;
   query: ReqQueries;
   // vars?: StringMap;
   body?: ReqBody;
-  [key: string]: any; // allow developers to add their onw extensions (e.g. req.test)
+  [key: string]: unknown; // allow developers to add their own extensions (e.g. req.test)
 }
 
 export interface CpeakResponse extends ServerResponse {
   sendFile: (path: string, mime: string) => Promise<void>;
   status: (code: number) => CpeakResponse;
   redirect: (location: string) => CpeakResponse;
-  json: (data: any) => void;
-  [key: string]: any; // allow developers to add their onw extensions (e.g. res.test)
+  json: <T = unknown>(data: T) => void;
+  render?: (path: string, data: Record<string, unknown>, mime: string) => Promise<void>;
+  [key: string]: unknown; // allow developers to add their own extensions (e.g. res.test)
 }
 
-export type Next = (err?: any) => void;
-export type HandleErr = (err: any) => void;
+export type Next = (err?: unknown) => void;
+export type HandleErr = (err: unknown) => void;
 
 // beforeEach middleware: (req, res, next)
-export type Middleware<ReqBody = any, ReqParams = any> = (
+export type Middleware<ReqBody = unknown, ReqParams = unknown> = (
   req: CpeakRequest<ReqBody, ReqParams>,
   res: CpeakResponse,
   next: Next
-) => void;
+) => void | Promise<void>;
 
 // Route middleware:      (req, res, next, handleErr)
-export type RouteMiddleware<ReqBody = any, ReqParams = any> = (
+export type RouteMiddleware<ReqBody = unknown, ReqParams = unknown> = (
   req: CpeakRequest<ReqBody, ReqParams>,
   res: CpeakResponse,
   next: Next,
@@ -44,7 +52,7 @@ export type RouteMiddleware<ReqBody = any, ReqParams = any> = (
 ) => void | Promise<void>;
 
 // Route handlers: (req, res, handleErr)
-export type Handler<ReqBody = any, ReqParams = any> = (
+export type Handler<ReqBody = unknown, ReqParams = unknown> = (
   req: CpeakRequest<ReqBody, ReqParams>,
   res: CpeakResponse,
   handleErr: HandleErr
