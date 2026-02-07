@@ -23,11 +23,8 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
-      # - name: Run Tests (Skipped for now)
-      #   run: npm test -- --ci --coverage
-
-      # - name: Lint Code (Skipped for now)
-      #   run: npm run lint
+      - name: Run Tests (Skipped for now)
+        run: npm test
 
       - name: Build Project
         run: npm run build
