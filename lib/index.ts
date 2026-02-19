@@ -333,9 +333,7 @@ class Cpeak {
 }
 
 // Util functions
-export { serveStatic } from "./utils/serveStatic.js";
-export { parseJSON } from "./utils/paseJSON.js";
-export { render } from "./utils/render.js";
+export { serveStatic, parseJSON, render } from "./utils";
 
 export type {
   Cpeak,
