@@ -55,7 +55,7 @@ function renderTemplate(
 // @TODO: add another {{{ }}} option to not escape the string
 const render = () => {
   return function (req: CpeakRequest, res: CpeakResponse, next: Next): void {
-    res.render = async (
+    const renderFunction = async (
       path: string,
       data: Record<string, unknown>,
       mime: string
@@ -64,7 +64,7 @@ const render = () => {
       if (!mime) {
         throw frameworkError(
           `MIME type is missing. You called res.render("${path}", ...) but forgot to provide the third "mime" argument.`,
-          res.render
+          renderFunction
         );
       }
 
@@ -73,6 +73,8 @@ const render = () => {
       res.setHeader("Content-Type", mime);
       res.end(finalStr);
     };
+
+    res.render = renderFunction;
 
     next();
   };

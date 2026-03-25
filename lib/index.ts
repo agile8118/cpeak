@@ -7,6 +7,7 @@ import type {
   StringMap,
   CpeakRequest,
   CpeakResponse,
+  CpeakError,
   Middleware,
   RouteMiddleware,
   Handler,
@@ -20,16 +21,13 @@ export function frameworkError(
   code?: string,
   status?: number
 ) {
-  const err = new Error(message) as Error & {
-    code?: string;
-    cpeak_err?: boolean;
-  };
+  const err = new Error(message) as CpeakError;
   Error.captureStackTrace(err, skipFn);
 
   err.cpeak_err = true;
 
   if (code) err.code = code;
-  if (status) (err as any).status = status;
+  if (status) err.status = status;
 
   return err;
 }
@@ -45,7 +43,7 @@ export enum ErrorCode {
 
 class CpeakIncomingMessage extends http.IncomingMessage {
   // We define body and params here for better V8 optimization (not changing the shape of the object at runtime)
-  public body: any = undefined;
+  public body: unknown = undefined;
   public params: StringMap = {};
 
   private _query?: StringMap;
@@ -97,8 +95,9 @@ class CpeakServerResponse extends http.ServerResponse<CpeakIncomingMessage> {
 
       // Properly propagate stream errors and respect backpressure
       await pipeline(createReadStream(path), this);
-    } catch (err: any) {
-      if (err?.code === "ENOENT") {
+    } catch (err: unknown) {
+      const error = err as NodeJS.ErrnoException;
+      if (error?.code === "ENOENT") {
         throw frameworkError(
           `File not found: ${path}`,
           this.sendFile,
@@ -128,7 +127,7 @@ class CpeakServerResponse extends http.ServerResponse<CpeakIncomingMessage> {
   }
 
   // Send a json data back to the client (for small json data, less than the highWaterMark)
-  json(data: any) {
+  json<T = unknown>(data: T) {
     // This is only good for bodies that their size is less than the highWaterMark value
     this.setHeader("Content-Type", "application/json");
     this.end(JSON.stringify(data));
@@ -339,6 +338,7 @@ export type {
   Cpeak,
   CpeakRequest,
   CpeakResponse,
+  CpeakError,
   Next,
   HandleErr,
   Middleware,
