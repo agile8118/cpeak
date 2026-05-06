@@ -1,7 +1,6 @@
 import { IncomingMessage, ServerResponse } from "node:http";
-import cpeak from "./index";
 
-export type Cpeak = ReturnType<typeof cpeak>;
+export type { Cpeak } from "./index";
 
 // Extending Node.js's Request and Response objects to add our custom properties
 export type StringMap = Record<string, string>;
@@ -12,15 +11,18 @@ export interface CpeakRequest<
 > extends IncomingMessage {
   params: StringMap;
   query: ReqQueries;
-  // vars?: StringMap;
   body?: ReqBody;
+  cookies?: StringMap;
+  signedCookies?: Record<string, string | false>;
   [key: string]: any; // allow developers to add their onw extensions (e.g. req.test)
 }
 
 export interface CpeakResponse extends ServerResponse {
   sendFile: (path: string, mime: string) => Promise<void>;
   status: (code: number) => CpeakResponse;
-  redirect: (location: string) => CpeakResponse;
+  attachment: (filename?: string) => CpeakResponse;
+  cookie: (name: string, value: string, options?: any) => CpeakResponse;
+  redirect: (location: string) => void;
   json: (data: any) => void;
   [key: string]: any; // allow developers to add their onw extensions (e.g. res.test)
 }

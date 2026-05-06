@@ -40,38 +40,39 @@ export enum ErrorCode {
   NOT_A_FILE = "CPEAK_ERR_NOT_A_FILE",
   SEND_FILE_FAIL = "CPEAK_ERR_SEND_FILE_FAIL",
   INVALID_JSON = "CPEAK_ERR_INVALID_JSON",
-  PAYLOAD_TOO_LARGE = "CPEAK_ERR_PAYLOAD_TOO_LARGE"
+  PAYLOAD_TOO_LARGE = "CPEAK_ERR_PAYLOAD_TOO_LARGE",
+  WEAK_SECRET = "CPEAK_ERR_WEAK_SECRET"
 }
 
-class CpeakIncomingMessage extends http.IncomingMessage {
+export class CpeakIncomingMessage extends http.IncomingMessage {
   // We define body and params here for better V8 optimization (not changing the shape of the object at runtime)
   public body: any = undefined;
   public params: StringMap = {};
 
-  private _query?: StringMap;
+  #query?: StringMap;
 
   // Parse the URL parameters (like /users?key1=value1&key2=value2)
   // We will call this query to be more familiar with other node.js frameworks.
   // This is a getter method (accessed like a property)
   get query(): StringMap {
     // This way if a developer writes req.query multiple times, we don't parse it multiple times
-    if (this._query) return this._query;
+    if (this.#query) return this.#query;
 
     const url = this.url || "";
     const qIndex = url.indexOf("?");
 
     if (qIndex === -1) {
-      this._query = {};
+      this.#query = {};
     } else {
       const searchParams = new URLSearchParams(url.substring(qIndex + 1));
-      this._query = Object.fromEntries(searchParams.entries());
+      this.#query = Object.fromEntries(searchParams.entries());
     }
 
-    return this._query;
+    return this.#query;
   }
 }
 
-class CpeakServerResponse extends http.ServerResponse<CpeakIncomingMessage> {
+export class CpeakServerResponse extends http.ServerResponse<CpeakIncomingMessage> {
   // Send a file back to the client
   async sendFile(path: string, mime: string) {
     if (!mime) {
@@ -120,11 +121,19 @@ class CpeakServerResponse extends http.ServerResponse<CpeakIncomingMessage> {
     return this;
   }
 
+  // Set the Content-Disposition header to prompt the user to download a file
+  attachment(filename?: string) {
+    const contentDisposition = filename
+      ? `attachment; filename="${filename}"`
+      : "attachment";
+    this.setHeader("Content-Disposition", contentDisposition);
+    return this;
+  }
+
   // Redirects to a new URL
   redirect(location: string) {
     this.writeHead(302, { Location: location });
     this.end();
-    return this;
   }
 
   // Send a json data back to the client (for small json data, less than the highWaterMark)
@@ -135,142 +144,136 @@ class CpeakServerResponse extends http.ServerResponse<CpeakIncomingMessage> {
   }
 }
 
-class Cpeak {
-  private server: http.Server<
-    typeof CpeakIncomingMessage,
-    typeof CpeakServerResponse
-  >;
-  private routes: RoutesMap;
-  private middleware: Middleware[];
-  private _handleErr?: (
-    err: unknown,
-    req: CpeakRequest,
-    res: CpeakResponse
-  ) => void;
+export class Cpeak {
+  #server: http.Server<typeof CpeakIncomingMessage, typeof CpeakServerResponse>;
+  #routes: RoutesMap;
+  #middleware: Middleware[];
+  #handleErr?: (err: unknown, req: CpeakRequest, res: CpeakResponse) => void;
 
   constructor() {
-    this.server = http.createServer({
+    this.#server = http.createServer({
       IncomingMessage: CpeakIncomingMessage,
       ServerResponse: CpeakServerResponse
     });
-    this.routes = {};
-    this.middleware = [];
+    this.#routes = {};
+    this.#middleware = [];
 
-    this.server.on("request", async (req: CpeakRequest, res: CpeakResponse) => {
-      // Get the url without the URL parameters (query strings)
-      const qIndex = req.url?.indexOf("?");
-      const urlWithoutQueries =
-        qIndex === -1 ? req.url || "" : req.url?.substring(0, qIndex);
+    this.#server.on(
+      "request",
+      async (req: CpeakRequest, res: CpeakResponse) => {
+        // Get the url without the URL parameters (query strings)
+        const qIndex = req.url?.indexOf("?");
+        const urlWithoutQueries =
+          qIndex === -1 ? req.url || "" : req.url?.substring(0, qIndex);
 
-      // Run all the specific middleware functions for that router only and then run the handler
-      const runHandler = async (
-        req: CpeakRequest,
-        res: CpeakResponse,
-        middleware: RouteMiddleware[],
-        cb: Handler,
-        index: number
-      ) => {
-        // Our exit point...
-        if (index === middleware.length) {
-          // Call the route handler with the modified req and res objects.
-          // Also handle the promise errors by passing them to the handleErr to save developers from having to manually wrap every handler in try catch.
-          try {
-            await cb(req, res, (error) => {
-              res.setHeader("Connection", "close");
-              this._handleErr?.(error, req, res);
-            });
-          } catch (error) {
-            res.setHeader("Connection", "close");
-            this._handleErr?.(error, req, res);
+        const dispatchError = (error: unknown) => {
+          if (res.headersSent) {
+            req.socket?.destroy();
+            return;
           }
-        } else {
-          // Handle the promise errors by passing them to the handleErr to save developers from having to manually wrap every handler middleware in try catch.
-          try {
-            await middleware[index](
-              req,
-              res,
-              // The next function
-              async (error) => {
-                // this function only accepts an error argument to be more compatible with NPM modules that are built for express
-                if (error) {
-                  res.setHeader("Connection", "close");
-                  return this._handleErr?.(error, req, res);
-                }
-                await runHandler(req, res, middleware, cb, index + 1);
-              },
-              // Error handler for a route middleware
-              (error) => {
-                res.setHeader("Connection", "close");
-                this._handleErr?.(error, req, res);
-              }
-            );
-          } catch (error) {
-            res.setHeader("Connection", "close");
-            this._handleErr?.(error, req, res);
-          }
-        }
-      };
+          res.setHeader("Connection", "close");
+          this.#handleErr?.(error, req, res);
+        };
 
-      // Run all the middleware functions (beforeEach functions) before we run the corresponding route
-      const runMiddleware = async (
-        req: CpeakRequest,
-        res: CpeakResponse,
-        middleware: Middleware[],
-        index: number
-      ) => {
-        // Our exit point...
-        if (index === middleware.length) {
-          const routes = this.routes[req.method?.toLowerCase() || ""];
-          if (routes && typeof routes[Symbol.iterator] === "function")
-            for (const route of routes) {
-              const match = urlWithoutQueries?.match(route.regex);
-
-              if (match) {
-                // Parse the URL path variables from the matched route (like /users/:id)
-                const pathVariables = this.#extractPathVariables(
-                  route.path,
-                  match
-                );
-
-                // We will call this params to be more familiar with other node.js frameworks.
-                req.params = pathVariables;
-
-                return await runHandler(
-                  req,
-                  res,
-                  route.middleware,
-                  route.cb,
-                  0
-                );
-              }
+        // Run all the specific middleware functions for that router only and then run the handler
+        const runHandler = async (
+          req: CpeakRequest,
+          res: CpeakResponse,
+          middleware: RouteMiddleware[],
+          cb: Handler,
+          index: number
+        ) => {
+          // Our exit point...
+          if (index === middleware.length) {
+            // Call the route handler with the modified req and res objects.
+            // Also handle the promise errors by passing them to the handleErr to save developers from having to manually wrap every handler in try catch.
+            try {
+              await cb(req, res, dispatchError);
+            } catch (error) {
+              dispatchError(error);
             }
-
-          // If the requested route dose not exist, return 404
-          return res
-            .status(404)
-            .json({ error: `Cannot ${req.method} ${urlWithoutQueries}` });
-        } else {
-          try {
-            await middleware[index](req, res, async (err?: unknown) => {
-              if (err) {
-                res.setHeader("Connection", "close");
-                return this._handleErr?.(err, req, res);
-              }
-              await runMiddleware(req, res, middleware, index + 1);
-            });
-          } catch (error) {
-            res.setHeader("Connection", "close");
-            this._handleErr?.(error, req, res);
+          } else {
+            // Handle the promise errors by passing them to the handleErr to save developers from having to manually wrap every handler middleware in try catch.
+            try {
+              await middleware[index](
+                req,
+                res,
+                // The next function
+                async (error) => {
+                  // this function only accepts an error argument to be more compatible with NPM modules that are built for express
+                  if (error) {
+                    return dispatchError(error);
+                  }
+                  await runHandler(req, res, middleware, cb, index + 1);
+                },
+                // Error handler for a route middleware
+                dispatchError
+              );
+            } catch (error) {
+              dispatchError(error);
+            }
           }
-        }
-      };
+        };
 
-      await runMiddleware(req, res, this.middleware, 0);
-    });
+        // Run all the middleware functions (beforeEach functions) before we run the corresponding route
+        const runMiddleware = async (
+          req: CpeakRequest,
+          res: CpeakResponse,
+          middleware: Middleware[],
+          index: number
+        ) => {
+          // Our exit point...
+          if (index === middleware.length) {
+            const routes = this.#routes[req.method?.toLowerCase() || ""];
+            if (routes && typeof routes[Symbol.iterator] === "function")
+              for (const route of routes) {
+                const match = urlWithoutQueries?.match(route.regex);
+
+                if (match) {
+                  // Parse the URL path variables from the matched route (like /users/:id)
+                  const pathVariables = this.#extractPathVariables(
+                    route.path,
+                    match
+                  );
+
+                  // We will call this params to be more familiar with other node.js frameworks.
+                  req.params = pathVariables;
+
+                  return await runHandler(
+                    req,
+                    res,
+                    route.middleware,
+                    route.cb,
+                    0
+                  );
+                }
+              }
+
+            // If the requested route dose not exist, return 404
+            return res
+              .status(404)
+              .json({ error: `Cannot ${req.method} ${urlWithoutQueries}` });
+          } else {
+            try {
+              await middleware[index](req, res, async (err?: unknown) => {
+                if (err) {
+                  return dispatchError(err);
+                }
+                await runMiddleware(req, res, middleware, index + 1);
+              });
+            } catch (error) {
+              dispatchError(error);
+            }
+          }
+        };
+
+        await runMiddleware(req, res, this.#middleware, 0);
+      }
+    );
   }
 
   route(method: string, path: string, ...args: (RouteMiddleware | Handler)[]) {
-    if (!this.routes[method]) this.routes[method] = [];
+    if (!this.#routes[method]) this.#routes[method] = [];
 
     // The last argument should always be our handler
     const cb = args.pop() as Handler;
@@ -283,40 +286,37 @@ class Cpeak {
     const middleware = args.flat() as RouteMiddleware[];
 
     const regex = this.#pathToRegex(path);
-    this.routes[method].push({ path, regex, middleware, cb });
+    this.#routes[method].push({ path, regex, middleware, cb });
   }
 
   beforeEach(cb: Middleware) {
-    this.middleware.push(cb);
+    this.#middleware.push(cb);
   }
 
   handleErr(cb: (err: unknown, req: CpeakRequest, res: CpeakResponse) => void) {
-    this._handleErr = cb;
+    this.#handleErr = cb;
   }
 
   listen(port: number, cb?: () => void) {
-    return this.server.listen(port, cb);
+    return this.#server.listen(port, cb);
+  }
+
+  address() {
+    return this.#server.address();
   }
 
   close(cb?: (err?: Error) => void) {
-    this.server.close(cb);
+    this.#server.close(cb);
   }
 
   // ------------------------------
   // PRIVATE METHODS:
   // ------------------------------
   #pathToRegex(path: string) {
-    const paramNames: string[] = [];
     const regexString =
-      "^" +
-      path.replace(/:\w+/g, (match, offset) => {
-        paramNames.push(match.slice(1));
-        return "([^/]+)";
-      }) +
-      "$";
+      "^" + path.replace(/:\w+/g, "([^/]+)").replace(/\*/g, ".*") + "$";
 
-    const regex = new RegExp(regexString);
-    return regex;
+    return new RegExp(regexString);
   }
 
   #extractPathVariables(path: string, match: RegExpMatchArray) {
@@ -333,10 +333,19 @@ class Cpeak {
 }
 
 // Util functions
-export { serveStatic, parseJSON, render } from "./utils";
+export {
+  serveStatic,
+  parseJSON,
+  render,
+  swagger,
+  auth,
+  hashPassword,
+  verifyPassword,
+  cookieParser
+} from "./utils";
+export type { AuthOptions, PbkdfOptions, CookieOptions } from "./utils";
 
 export type {
-  Cpeak,
   CpeakRequest,
   CpeakResponse,
   Next,
@@ -347,6 +356,6 @@ export type {
   RoutesMap
 } from "./types";
 
-export default function cpeak() {
+export default function cpeak(): Cpeak {
   return new Cpeak();
 }
