@@ -1,21 +1,18 @@
 # Security Policy
 
+We're developing Cpeak with security at its core. We take all reported vulnerabilities seriously, especially in areas involving cookies and authentication where we use cryptography.
+
 ## Supported Versions
 
-Use this section to tell people about which versions of your project are
-currently being supported with security updates.
-
-| Version | Supported          |
+| Version | Security Updates   |
 | ------- | ------------------ |
-| 5.1.x   | :white_check_mark: |
-| 5.0.x   | :x:                |
-| 4.0.x   | :white_check_mark: |
-| < 4.0   | :x:                |
+| >= 2.6  | :white_check_mark: |
+| < 2.6   | :x:                |
 
 ## Reporting a Vulnerability
 
-Use this section to tell people how to report a vulnerability.
+If you discover a security vulnerability, please report it by
+[creating an issue](https://github.com/agile8118/cpeak/issues) on our GitHub
+repository and tagging it with the **security** label.
 
-Tell them where to go, how often they can expect to get an update on a
-reported vulnerability, what to expect if the vulnerability is accepted or
-declined, etc.
+We will review your report and respond as soon as possible. Thank you for your cooperation in helping us keep Cpeak secure!
