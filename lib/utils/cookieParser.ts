@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import type { CpeakRequest, CpeakResponse, Next } from "../types";
+import { frameworkError, ErrorCode } from "../index";
 
 export interface CookieOptions {
   signed?: boolean;
@@ -123,6 +124,14 @@ function appendSetCookie(res: CpeakResponse, header: string) {
 
 export function cookieParser(options: { secret?: string } = {}) {
   const { secret } = options;
+
+  if (secret !== undefined && secret.length < 32) {
+    throw frameworkError(
+      "Secret must be at least 32 characters. HMAC security is only as strong as the key.",
+      cookieParser,
+      ErrorCode.WEAK_SECRET
+    );
+  }
 
   return (req: CpeakRequest, res: CpeakResponse, next: Next) => {
     const rawHeader = req.headers["cookie"] || "";

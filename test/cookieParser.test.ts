@@ -170,7 +170,7 @@ describe("Parsing cookies with cookieParser", function () {
 
 describe("Setting cookies with cookieParser", function () {
   let server2: Cpeak;
-  const SECRET = "test-secret";
+  const SECRET = "test-secret-cpeak-cookie-signing!!";
   const PORT2 = 7544;
   const request2 = supertest(`http://localhost:${PORT2}`);
 
