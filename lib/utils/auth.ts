@@ -2,6 +2,7 @@ import { randomBytes, pbkdf2, createHmac, timingSafeEqual } from "node:crypto";
 import { promisify } from "node:util";
 import type { Middleware } from "../types";
 import { frameworkError, ErrorCode } from "../index";
+import type { AuthOptions, PbkdfOptions } from "./types";
 
 const pbkdf2Async = promisify(pbkdf2);
 
@@ -14,29 +15,6 @@ const DEFAULTS = {
   tokenIdSize: 20,
   tokenExpiry: 7 * 24 * 60 * 60 * 1000 // 7 days in ms
 } as const;
-
-export interface PbkdfOptions {
-  iterations?: number;
-  keylen?: number;
-  digest?: string;
-  saltSize?: number;
-}
-
-export interface AuthOptions extends PbkdfOptions {
-  secret: string;
-  saveToken: (
-    tokenId: string,
-    userId: string,
-    expiresAt: Date
-  ) => Promise<void>;
-  findToken: (
-    tokenId: string
-  ) => Promise<{ userId: string; expiresAt: Date } | null>;
-  tokenExpiry?: number;
-  hmacAlgorithm?: string;
-  tokenIdSize?: number;
-  revokeToken?: (tokenId: string) => Promise<void>;
-}
 
 export async function hashPassword(
   password: string,

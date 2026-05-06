@@ -1,17 +1,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import type { CpeakRequest, CpeakResponse, Next } from "../types";
 import { frameworkError, ErrorCode } from "../index";
-
-export interface CookieOptions {
-  signed?: boolean;
-  httpOnly?: boolean;
-  secure?: boolean;
-  sameSite?: "strict" | "lax" | "none";
-  maxAge?: number; // ms
-  expires?: Date;
-  path?: string;
-  domain?: string;
-}
+import type { CookieOptions } from "./types";
 
 // This will sign the cookie value with HMAC with the secret.
 // Ideal for data like user IDs or session IDs, where you want to ensure the integrity of the cookie value without encryption.

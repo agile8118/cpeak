@@ -1,22 +1,5 @@
 import type { CpeakRequest, CpeakResponse, Next } from "../types";
-
-type OriginInput =
-  | string
-  | string[]
-  | RegExp
-  | boolean
-  | ((origin: string | undefined) => boolean | Promise<boolean>);
-
-export interface CorsOptions {
-  origin?: OriginInput;
-  methods?: string | string[];
-  allowedHeaders?: string | string[];
-  exposedHeaders?: string | string[];
-  credentials?: boolean;
-  maxAge?: number;
-  preflightContinue?: boolean;
-  optionsSuccessStatus?: number;
-}
+import type { CorsOptions, OriginInput } from "./types";
 
 // Append a value to an existing header without overwriting prior entries
 // (e.g. compression already sets `Vary: Accept-Encoding`).

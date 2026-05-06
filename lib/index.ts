@@ -344,7 +344,7 @@ export {
   cookieParser,
   cors
 } from "./utils";
-export type { AuthOptions, PbkdfOptions, CookieOptions, CorsOptions } from "./utils";
+export type { AuthOptions, PbkdfOptions, CookieOptions, CorsOptions } from "./utils/types";
 
 export type {
   CpeakRequest,
