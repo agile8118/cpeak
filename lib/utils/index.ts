@@ -6,6 +6,8 @@ import { auth, hashPassword, verifyPassword } from "./auth";
 import type { AuthOptions, PbkdfOptions } from "./auth";
 import { cookieParser } from "./cookieParser";
 import type { CookieOptions } from "./cookieParser";
+import { cors } from "./cors";
+import type { CorsOptions } from "./cors";
 
 export {
   serveStatic,
@@ -15,6 +17,7 @@ export {
   auth,
   hashPassword,
   verifyPassword,
-  cookieParser
+  cookieParser,
+  cors
 };
-export type { AuthOptions, PbkdfOptions, CookieOptions };
+export type { AuthOptions, PbkdfOptions, CookieOptions, CorsOptions };

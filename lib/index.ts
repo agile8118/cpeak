@@ -341,9 +341,10 @@ export {
   auth,
   hashPassword,
   verifyPassword,
-  cookieParser
+  cookieParser,
+  cors
 } from "./utils";
-export type { AuthOptions, PbkdfOptions, CookieOptions } from "./utils";
+export type { AuthOptions, PbkdfOptions, CookieOptions, CorsOptions } from "./utils";
 
 export type {
   CpeakRequest,

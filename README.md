@@ -37,6 +37,7 @@ This is an educational project that was started as part of the [Understanding No
     - [cookieParser](#cookieparser)
     - [swagger](#swagger)
     - [auth](#auth)
+    - [cors](#cors)
 - [Complete Example](#complete-example)
 - [Versioning Notice](#versioning-notice)
 
@@ -118,18 +119,6 @@ server.beforeEach((req, res, next) => {
   );
   next();
 });
-
-### CORS Middleware
-The CORS middleware allows you to enable Cross-Origin Resource Sharing in your application.
-
-```javascript
-import { cors } from "cpeak";
-
-server.beforeEach(cors({
-  origin: "http://localhost:3000",  // Allow specific origin
-  credentials: true,                // Allow credentials
-  methods: "GET,POST,PUT,DELETE"    // Allowed methods
-}));
 ```
 
 ### Route Middleware
@@ -285,6 +274,7 @@ The list of utility functions as of now:
 - cookieParser
 - swagger
 - auth
+- cors
 
 Including any one of them is done like this:
 
@@ -583,12 +573,34 @@ For complete working examples, see:
 - [`examples/auth-localstorage.js`](examples/auth-localstorage.js) — token sent via the `Authorization` header (suited for SPAs and mobile clients)
 - [`examples/auth-cookies.js`](examples/auth-cookies.js) — token stored in an `httpOnly` cookie (protects against XSS)
 
+#### cors
+The CORS middleware allows you to enable Cross-Origin Resource Sharing in your application.
+
+```javascript
+server.beforeEach(cors({
+  origin: "http://localhost:3000",  // string, string[], RegExp, boolean, or async (origin) => boolean. Default: "*" (all origins)
+  methods: "GET,POST,PUT,DELETE",   // allowed HTTP methods. Default: "GET,HEAD,PUT,PATCH,POST,DELETE"
+  allowedHeaders: "Content-Type",   // headers the browser may send. Default: echoes request headers for origin:"*", else "Content-Type, Authorization"
+  exposedHeaders: "X-Request-Id",   // response headers the browser may read. Default: none
+  credentials: true,                // adds Access-Control-Allow-Credentials: true. Default: false
+  maxAge: 3600,                     // seconds to cache preflight result in the browser. Default: 86400
+  preflightContinue: false,         // pass OPTIONS preflight to next middleware instead of auto-responding. Default: false
+  optionsSuccessStatus: 204         // status code for successful preflight responses. Default: 204
+}));
+```
+
+Or if you don't care and want to allow everything with the default settings, just do:
+
+```javascript
+server.beforeEach(cors());
+```
+
 ## Complete Example
 
 Here you can see all the features that Cpeak offers (excluding the authentication features), in one small piece of code:
 
 ```javascript
-import cpeak, { serveStatic, parseJSON, render, cookieParser } from "cpeak";
+import cpeak, { serveStatic, parseJSON, render, cookieParser, cors } from "cpeak";
 
 const server = cpeak();
 
@@ -605,6 +617,13 @@ server.beforeEach(parseJSON());
 
 // For reading and setting cookies
 server.beforeEach(cookieParser({ secret: "your-secret-key" }));
+
+// For enabling CORS
+server.beforeEach(cors({
+  origin: "http://localhost:3000",
+  credentials: true,
+  methods: "GET,POST,PUT,DELETE"
+}));
 
 // Adding custom middleware functions
 server.beforeEach((req, res, next) => {
