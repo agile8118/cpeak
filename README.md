@@ -34,6 +34,7 @@ This is an educational project that was started as part of the [Understanding No
     - [serveStatic](#servestatic)
     - [parseJSON](#parsejson)
     - [render](#render)
+    - [cookieParser](#cookieparser)
 - [Complete Example](#complete-example)
 - [Versioning Notice](#versioning-notice)
 
@@ -267,6 +268,7 @@ The list of utility functions as of now:
 - serveStatic
 - parseJSON
 - render
+- cookieParser
 
 Including any one of them is done like this:
 
@@ -366,12 +368,73 @@ You can then inject the variables into your file in {{ variable_name }} like thi
 </html>
 ```
 
+#### cookieParser
+
+With this middleware function, you can easily read and set cookies in your route and middleware functions. Fire it up like this:
+
+```javascript
+server.beforeEach(cookieParser());
+```
+
+If you need to use signed cookies, pass a secret:
+
+```javascript
+server.beforeEach(cookieParser({ secret: "your-secret-key" }));
+```
+
+Signed cookies use HMAC to verify integrity. The original value stays readable by the client, but any tampering with it will be detected on the server side. This makes them a solid choice for session identifiers or user IDs where you want to prevent impersonation without hiding the value itself.
+
+Read incoming cookies like this:
+
+```javascript
+server.route("get", "/dashboard", (req, res) => {
+  // Regular cookies
+  const theme = req.cookies.theme;
+
+  // Signed cookies — returns false if the signature is invalid or the value was tampered with
+  const userId = req.signedCookies.userId;
+
+  res.status(200).json({ theme, userId });
+});
+```
+
+Set cookies on the response like this:
+
+```javascript
+server.route("post", "/login", (req, res) => {
+  // A plain cookie
+  res.cookie("theme", "dark", { httpOnly: true, maxAge: 7 * 24 * 60 * 60 * 1000 });
+
+  // A signed cookie
+  res.cookie("userId", "abc123", { signed: true, httpOnly: true, secure: true });
+
+  res.status(200).json({ message: "Logged in" });
+});
+```
+
+Clear a cookie like this:
+
+```javascript
+res.clearCookie("userId");
+```
+
+The full list of cookie options you can pass as the third argument to `res.cookie()`:
+
+- `signed` — sign the cookie value with HMAC using the secret you provided to `cookieParser`
+- `httpOnly` — prevents client-side JavaScript from accessing the cookie
+- `secure` — instructs the browser to send the cookie only over HTTPS
+- `sameSite` — controls cross-site cookie behavior; accepts `"strict"`, `"lax"`, or `"none"`
+- `maxAge` — cookie lifetime in milliseconds
+- `expires` — a specific expiration `Date` for the cookie
+- `path` — path the cookie is valid for (defaults to `"/"`)
+- `domain` — domain the cookie is valid for
+
 ## Complete Example
 
 Here you can see all the features that Cpeak offers, in one small piece of code:
 
 ```javascript
-import cpeak, { serveStatic, parseJSON, render } from "cpeak";
+import cpeak, { serveStatic, parseJSON, render, cookieParser } from "cpeak";
 
 const server = cpeak();
 
@@ -385,6 +448,9 @@ server.beforeEach(render());
 
 // For parsing JSON bodies
 server.beforeEach(parseJSON());
+
+// For reading and setting cookies
+server.beforeEach(cookieParser({ secret: "your-secret-key" }));
 
 // Adding custom middleware functions
 server.beforeEach((req, res, next) => {
@@ -435,6 +501,16 @@ server.route("get", "/api/document/:title", testRouteMiddleware, (req, res) => {
 
   // Sending a JSON response
   res.status(200).json({ message: "This is a test response" });
+});
+
+// Reading and setting cookies
+server.route("post", "/login", (req, res) => {
+  // Reads are available via req.cookies and req.signedCookies
+  const sessionId = req.signedCookies.sessionId;
+
+  // Set a signed session cookie
+  res.cookie("sessionId", "abc123", { signed: true, httpOnly: true, secure: true });
+  res.status(200).json({ message: "Logged in" });
 });
 
 // Sending a file response
