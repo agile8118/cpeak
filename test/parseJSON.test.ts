@@ -1,6 +1,6 @@
 import assert from "node:assert";
 import supertest from "supertest";
-import cpeak, { parseJSON } from "../lib/";
+import cpeak, { Cpeak, parseJSON } from "../lib/";
 
 import type { CpeakRequest, CpeakResponse } from "../lib/types";
 
@@ -8,12 +8,12 @@ const PORT = 7543;
 const request = supertest(`http://localhost:${PORT}`);
 
 describe("Parsing request bodies with parseJSON", function () {
-  let server: cpeak;
+  let server: Cpeak;
 
   before(function (done) {
-    server = new cpeak();
+    server = cpeak();
 
-    server.beforeEach(parseJSON);
+    server.beforeEach(parseJSON());
 
     server.route(
       "post",
@@ -36,9 +36,9 @@ describe("Parsing request bodies with parseJSON", function () {
       key2: 42,
       key3: {
         nestedKey1: "nestedValue1",
-        nestedKey2: ["arrayValue1", "arrayValue2", 1000],
+        nestedKey2: ["arrayValue1", "arrayValue2", 1000]
       },
-      key4: true,
+      key4: true
     };
 
     const res = await request.post("/do-something").send(obj);

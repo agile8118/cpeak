@@ -2,15 +2,16 @@ import assert from "node:assert";
 import supertest from "supertest";
 import fs from "node:fs/promises";
 import cpeak, { serveStatic } from "../lib/";
+import type { Cpeak } from "../lib/types";
 
 const PORT = 7543;
 const request = supertest(`http://localhost:${PORT}`);
 
 describe("Serving static files with serveStatic", function () {
-  let server: cpeak;
+  let server: Cpeak;
 
   before(function (done) {
-    server = new cpeak();
+    server = cpeak();
 
     server.beforeEach(serveStatic("./test/files", { m4a: "audio/mp4" }));
 

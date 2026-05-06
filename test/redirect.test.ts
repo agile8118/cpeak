@@ -2,16 +2,16 @@ import assert from "node:assert";
 import supertest from "supertest";
 import cpeak from "../lib/";
 
-import type { CpeakRequest, CpeakResponse } from "../lib/types";
+import type { Cpeak, CpeakRequest, CpeakResponse } from "../lib/types";
 
 const PORT = 7543;
 const request = supertest(`http://localhost:${PORT}`);
 
 describe("Redirecting to a new URL with res.redirect function", function () {
-  let server: cpeak;
+  let server: Cpeak;
 
   before(function (done) {
-    server = new cpeak();
+    server = cpeak();
 
     server.route(
       "get",

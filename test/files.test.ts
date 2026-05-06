@@ -3,16 +3,21 @@ import supertest from "supertest";
 import fs from "node:fs/promises";
 import cpeak from "../lib/";
 
-import type { CpeakRequest, CpeakResponse, HandleErr } from "../lib/types";
+import type {
+  Cpeak,
+  CpeakRequest,
+  CpeakResponse,
+  HandleErr
+} from "../lib/types";
 
 const PORT = 7543;
 const request = supertest(`http://localhost:${PORT}`);
 
 describe("Returning files with sendFile", function () {
-  let server: cpeak;
+  let server: Cpeak;
 
   before(function (done) {
-    server = new cpeak();
+    server = cpeak();
 
     server.route("get", "/file", (req: CpeakRequest, res: CpeakResponse) => {
       res.status(200).sendFile("./test/files/test.txt", "text/plain");

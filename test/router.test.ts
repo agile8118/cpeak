@@ -2,16 +2,16 @@ import assert from "node:assert";
 import supertest from "supertest";
 import cpeak from "../lib/";
 
-import type { CpeakRequest, CpeakResponse } from "../lib/types";
+import type { Cpeak, CpeakRequest, CpeakResponse } from "../lib/types";
 
 const PORT = 7543;
 const request = supertest(`http://localhost:${PORT}`);
 
 describe("General route logic & URL variables and parameters", function () {
-  let server: cpeak;
+  let server: Cpeak;
 
   before(function (done) {
-    server = new cpeak();
+    server = cpeak();
 
     server.route("get", "/hello", (req: CpeakRequest, res: CpeakResponse) => {
       res.status(200).json({ message: "Hello, World!" });
@@ -21,11 +21,11 @@ describe("General route logic & URL variables and parameters", function () {
       "get",
       "/document/:title/more/:another/final",
       (req: CpeakRequest, res: CpeakResponse) => {
-        const title = req.vars?.title;
-        const another = req.vars?.another;
-        const params = req.params;
+        const title = req.params?.title;
+        const another = req.params?.another;
+        const query = req.query;
 
-        res.status(200).json({ title, another, params });
+        res.status(200).json({ title, another, query });
       }
     );
 
@@ -46,7 +46,7 @@ describe("General route logic & URL variables and parameters", function () {
     const res = await request.get("/unknown");
     assert.strictEqual(res.status, 404);
     assert.deepStrictEqual(res.body, {
-      error: "Cannot GET /unknown",
+      error: "Cannot GET /unknown"
     });
   });
 
@@ -54,7 +54,7 @@ describe("General route logic & URL variables and parameters", function () {
     const res = await request.patch("/random");
     assert.strictEqual(res.status, 404);
     assert.deepStrictEqual(res.body, {
-      error: "Cannot PATCH /random",
+      error: "Cannot PATCH /random"
     });
   });
 
@@ -62,15 +62,15 @@ describe("General route logic & URL variables and parameters", function () {
     const expectedResponseBody = {
       title: "some-title",
       another: "thisISsome__more-text",
-      params: {
+      query: {
         filter: "comments-date",
         page: "2",
         sortBy: "date-desc",
         tags: JSON.stringify(["nodejs", "express", "url-params"]),
         author: JSON.stringify({ name: "John Doe", id: 123 }),
         isPublished: "true",
-        metadata: JSON.stringify({ version: "1.0.0", language: "en" }),
-      },
+        metadata: JSON.stringify({ version: "1.0.0", language: "en" })
+      }
     };
 
     const res = await request
@@ -82,7 +82,7 @@ describe("General route logic & URL variables and parameters", function () {
         tags: JSON.stringify(["nodejs", "express", "url-params"]),
         author: JSON.stringify({ name: "John Doe", id: 123 }),
         isPublished: true,
-        metadata: JSON.stringify({ version: "1.0.0", language: "en" }),
+        metadata: JSON.stringify({ version: "1.0.0", language: "en" })
       });
 
     assert.strictEqual(res.status, 200);

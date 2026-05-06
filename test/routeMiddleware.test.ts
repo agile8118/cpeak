@@ -2,19 +2,19 @@ import assert from "node:assert";
 import supertest from "supertest";
 import cpeak from "../lib/";
 
-import type { CpeakRequest, CpeakResponse } from "../lib/types";
+import type { Cpeak, CpeakRequest, CpeakResponse } from "../lib/types";
 
 const PORT = 7543;
 const request = supertest(`http://localhost:${PORT}`);
 
 describe("Route middleware functions", function () {
-  let server: cpeak;
+  let server: Cpeak;
 
   before(function (done) {
-    server = new cpeak();
+    server = cpeak();
 
     const mid1 = (req: CpeakRequest, res: CpeakResponse, next: () => void) => {
-      const value = req.params.value;
+      const value = req.query.value;
 
       if (value === "random")
         return res.status(400).json({ error: "an error msg" });

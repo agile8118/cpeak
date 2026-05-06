@@ -2,16 +2,16 @@ import assert from "node:assert";
 import supertest from "supertest";
 import cpeak, { render } from "../lib/";
 
-import type { CpeakRequest, CpeakResponse } from "../lib/types";
+import type { Cpeak, CpeakRequest, CpeakResponse } from "../lib/types";
 
 const PORT = 7543;
 const request = supertest(`http://localhost:${PORT}`);
 
 describe("Rendering a template with render middleware", function () {
-  let server: cpeak;
+  let server: Cpeak;
 
   before(function (done) {
-    server = new cpeak();
+    server = cpeak();
 
     server.beforeEach(render());
 
@@ -20,7 +20,7 @@ describe("Rendering a template with render middleware", function () {
         `./test/files/index.html`,
         {
           title: "Home",
-          body: "Welcome to the Home Page",
+          body: "Welcome to the Home Page"
         },
         "text/html"
       );
