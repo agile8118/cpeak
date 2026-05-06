@@ -17,13 +17,23 @@ const MIME_TYPES: StringMap = {
   ttf: "font/ttf",
   woff: "font/woff",
   woff2: "font/woff2",
+  gif: "image/gif",
+  ico: "image/x-icon",
+  json: "application/json",
+  webmanifest: "application/manifest+json"
 };
 
-const serveStatic = (folderPath: string, newMimeTypes?: StringMap) => {
+const serveStatic = (
+  folderPath: string,
+  newMimeTypes?: StringMap,
+  options?: { prefix?: string }
+) => {
   // For new user defined mime types
   if (newMimeTypes) {
     Object.assign(MIME_TYPES, newMimeTypes);
   }
+
+  const prefix = options?.prefix ?? "";
 
   function processFolder(folderPath: string, parentFolder: string) {
     const staticFiles: string[] = [];
@@ -55,9 +65,9 @@ const serveStatic = (folderPath: string, newMimeTypes?: StringMap) => {
     const filesMap: Record<string, { path: string; mime: string }> = {};
     for (const file of filesArray) {
       const fileExtension = path.extname(file).slice(1);
-      filesMap[file] = {
+      filesMap[prefix + file] = {
         path: folderPath + file,
-        mime: MIME_TYPES[fileExtension],
+        mime: MIME_TYPES[fileExtension]
       };
     }
     return filesMap;
@@ -70,8 +80,9 @@ const serveStatic = (folderPath: string, newMimeTypes?: StringMap) => {
     const url = req.url;
     if (typeof url !== "string") return next();
 
-    if (Object.prototype.hasOwnProperty.call(filesMap, url)) {
-      const fileRoute = filesMap[url];
+    const pathname = url.split("?")[0];
+    if (Object.prototype.hasOwnProperty.call(filesMap, pathname)) {
+      const fileRoute = filesMap[pathname];
       return res.sendFile(fileRoute.path, fileRoute.mime);
     }
 

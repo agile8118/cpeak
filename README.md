@@ -298,13 +298,27 @@ If you have file types in your public folder that are not one of the following, 
   jpeg: "image/jpeg",
   png: "image/png",
   svg: "image/svg+xml",
+  gif: "image/gif",
+  ico: "image/x-icon",
   txt: "text/plain",
+  json: "application/json",
+  webmanifest: "application/manifest+json",
   eot: "application/vnd.ms-fontobject",
   otf: "font/otf",
   ttf: "font/ttf",
   woff: "font/woff",
   woff2: "font/woff2"
 ```
+
+You can also serve your static files under a URL prefix by passing a third argument with a `prefix` option. This is useful when you want all static assets to live under a specific path like `/static`:
+
+```javascript
+server.beforeEach(
+  serveStatic("./public", null, { prefix: "/static" })
+);
+```
+
+With this setup, a file at `./public/app.js` would be served at `/static/app.js` instead of `/app.js`. Pass `null` as the second argument if you don’t need any custom MIME types.
 
 #### parseJSON
 
