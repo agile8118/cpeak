@@ -35,6 +35,7 @@ This is an educational project that was started as part of the [Understanding No
     - [parseJSON](#parsejson)
     - [render](#render)
     - [cookieParser](#cookieparser)
+    - [swagger](#swagger)
 - [Complete Example](#complete-example)
 - [Versioning Notice](#versioning-notice)
 
@@ -269,6 +270,7 @@ The list of utility functions as of now:
 - parseJSON
 - render
 - cookieParser
+- swagger
 
 Including any one of them is done like this:
 
@@ -442,6 +444,51 @@ The full list of cookie options you can pass as the third argument to `res.cooki
 - `expires` — a specific expiration `Date` for the cookie
 - `path` — path the cookie is valid for (defaults to `"/"`)
 - `domain` — domain the cookie is valid for
+
+#### swagger
+
+With this middleware function, you can serve an interactive Swagger UI for your API documentation. It works alongside the `serveStatic` utility and two npm packages: `swagger-ui-dist` (the Swagger UI static assets) and `yamljs` (to load your YAML spec file).
+
+Start by installing the dependencies:
+
+```bash
+npm install swagger-ui-dist yamljs
+```
+
+Then fire it up like this:
+
+```javascript
+import cpeak, { swagger, serveStatic } from "cpeak";
+import YAML from "yamljs";
+import swaggerUiDist from "swagger-ui-dist";
+import path from "node:path";
+
+const server = cpeak();
+
+const swaggerDocument = YAML.load(
+  path.join(path.resolve(), "./src/swagger.yml")
+);
+
+server.beforeEach(swagger(swaggerDocument));
+server.beforeEach(
+  serveStatic(swaggerUiDist.getAbsoluteFSPath(), undefined, {
+    prefix: "/api-docs",
+  })
+);
+```
+
+Once set up, your Swagger UI will be available at `/api-docs`. The `swagger` middleware handles serving your spec at `/api-docs/spec.json` and wiring up the Swagger UI initializer, while `serveStatic` serves all the Swagger UI static assets under the same prefix.
+
+If you want to serve the docs under a different path, pass it as the second argument to `swagger` and match the prefix in `serveStatic`:
+
+```javascript
+server.beforeEach(swagger(swaggerDocument, "/docs"));
+server.beforeEach(
+  serveStatic(swaggerUiDist.getAbsoluteFSPath(), undefined, {
+    prefix: "/docs",
+  })
+);
+```
 
 ## Complete Example
 
