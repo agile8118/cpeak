@@ -36,6 +36,7 @@ This is an educational project that was started as part of the [Understanding No
     - [render](#render)
     - [cookieParser](#cookieparser)
     - [swagger](#swagger)
+    - [auth](#auth)
 - [Complete Example](#complete-example)
 - [Versioning Notice](#versioning-notice)
 
@@ -271,6 +272,7 @@ The list of utility functions as of now:
 - render
 - cookieParser
 - swagger
+- auth
 
 Including any one of them is done like this:
 
@@ -490,9 +492,88 @@ server.beforeEach(
 );
 ```
 
+#### auth
+
+With this middleware you can add a full-fledged authentication system to your application with emails, username and password authentication, with features such as Forgot Password, Update Password and so forth. We have no external dependencies, with timing-safe comparisons throughout. It attaches helper methods directly to `req` so your route handlers stay clean.
+
+Fire it up like this:
+
+```javascript
+import cpeak, { parseJSON, cookieParser, auth } from "cpeak";
+
+const app = cpeak();
+
+app.beforeEach(parseJSON());
+app.beforeEach(cookieParser());
+
+app.beforeEach(
+  auth({
+    // Required
+    secret: "your-secret-min-32-chars-long!!!", // used to sign token IDs with HMAC
+    saveToken: async (tokenId, userId, expiresAt) => { /* store in your DB */ },
+    findToken: async (tokenId) => { /* return { userId, expiresAt } or null */ },
+
+    // Enables req.logout()
+    revokeToken: async (tokenId) => { /* delete from your DB */ },
+
+    // Optional PBKDF2 tuning (defaults shown):
+    iterations: 210_000,  // higher = slower brute-force
+    keylen: 64,           // derived key length in bytes
+    digest: "sha512",
+    saltSize: 32,
+
+    // Optional token signing tuning (defaults shown):
+    hmacAlgorithm: "sha256",
+    tokenIdSize: 20,
+    tokenExpiry: 7 * 24 * 60 * 60 * 1000, // 7 days in ms
+  })
+);
+```
+
+Once set up, the following methods are available on `req` inside your routes and middleware:
+
+| Method | Description |
+|--------|-------------|
+| `req.hashPassword({ password })` | Hashes a password with PBKDF2. Store the result; never store plaintext. |
+| `req.login({ password, hashedPassword, userId })` | Verifies the password and if correct, creates a signed token. Returns the token string to send to the client, or `null` on wrong password. |
+| `req.verifyToken(token)` | Validates a token's HMAC signature and expiry. Returns `{ userId }` or `null`. |
+| `req.logout(token)` | Revokes the token via your `revokeToken` callback. Only available when `revokeToken` is provided. |
+
+Here are the two most common middleware patterns you'll want to set up:
+
+```javascript
+// Throws 401 if the request has no valid token. Use on protected routes.
+const requireAuth = async (req, res, next) => {
+  const token = req.headers["authorization"];
+  if (!token) throw { status: 401, message: "Unauthorized." };
+
+  const result = await req.verifyToken(token);
+  if (!result) throw { status: 401, message: "Unauthorized." };
+
+  req.user = { id: result.userId };
+  next();
+};
+
+// Silently sets req.user when a valid token is present, but lets the request through either way.
+// Useful for routes accessible by both authenticated and unauthenticated users.
+const optionalAuth = async (req, _res, next) => {
+  const token = req.headers["authorization"];
+  if (token) {
+    const result = await req.verifyToken(token);
+    if (result) req.user = { id: result.userId };
+  }
+  next();
+};
+```
+
+For complete working examples, see:
+
+- [`examples/auth-localstorage.js`](examples/auth-localstorage.js) — token sent via the `Authorization` header (suited for SPAs and mobile clients)
+- [`examples/auth-cookies.js`](examples/auth-cookies.js) — token stored in an `httpOnly` cookie (protects against XSS)
+
 ## Complete Example
 
-Here you can see all the features that Cpeak offers, in one small piece of code:
+Here you can see all the features that Cpeak offers (excluding the authentication features), in one small piece of code:
 
 ```javascript
 import cpeak, { serveStatic, parseJSON, render, cookieParser } from "cpeak";
