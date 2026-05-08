@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import { frameworkError } from "../";
+import { compressAndSend } from "../internal/compression";
 import type { CpeakRequest, CpeakResponse, Next } from "../types";
 
 function renderTemplate(
@@ -70,6 +71,12 @@ const render = () => {
 
       let fileStr = await fs.readFile(path, "utf-8");
       const finalStr = renderTemplate(fileStr, data);
+
+      if (res._compression) {
+        await compressAndSend(res, mime, finalStr, res._compression);
+        return;
+      }
+
       res.setHeader("Content-Type", mime);
       res.end(finalStr);
     };

@@ -2,9 +2,17 @@ import http from "node:http";
 import fs from "node:fs/promises";
 import { createReadStream } from "node:fs";
 import { pipeline } from "node:stream/promises";
+import type { Readable } from "node:stream";
+import type { Buffer } from "node:buffer";
+
+import {
+  resolveCompressionOptions,
+  compressAndSend
+} from "./internal/compression";
 
 import type {
   StringMap,
+  CpeakOptions,
   CpeakRequest,
   CpeakResponse,
   Middleware,
@@ -12,6 +20,8 @@ import type {
   Handler,
   RoutesMap
 } from "./types";
+
+import type { ResolvedCompressionConfig } from "./internal/types";
 
 // A utility function to create an error with a custom stack trace
 export function frameworkError(
@@ -41,7 +51,8 @@ export enum ErrorCode {
   SEND_FILE_FAIL = "CPEAK_ERR_SEND_FILE_FAIL",
   INVALID_JSON = "CPEAK_ERR_INVALID_JSON",
   PAYLOAD_TOO_LARGE = "CPEAK_ERR_PAYLOAD_TOO_LARGE",
-  WEAK_SECRET = "CPEAK_ERR_WEAK_SECRET"
+  WEAK_SECRET = "CPEAK_ERR_WEAK_SECRET",
+  COMPRESSION_NOT_ENABLED = "CPEAK_ERR_COMPRESSION_NOT_ENABLED"
 }
 
 export class CpeakIncomingMessage extends http.IncomingMessage {
@@ -73,6 +84,9 @@ export class CpeakIncomingMessage extends http.IncomingMessage {
 }
 
 export class CpeakServerResponse extends http.ServerResponse<CpeakIncomingMessage> {
+  // Set per-request from the Cpeak instance. Undefined when compression isn't enabled.
+  _compression?: ResolvedCompressionConfig;
+
   // Send a file back to the client
   async sendFile(path: string, mime: string) {
     if (!mime) {
@@ -91,6 +105,17 @@ export class CpeakServerResponse extends http.ServerResponse<CpeakIncomingMessag
           this.sendFile,
           ErrorCode.NOT_A_FILE
         );
+      }
+
+      if (this._compression) {
+        await compressAndSend(
+          this,
+          mime,
+          createReadStream(path),
+          this._compression,
+          stat.size
+        );
+        return;
       }
 
       this.setHeader("Content-Type", mime);
@@ -136,11 +161,32 @@ export class CpeakServerResponse extends http.ServerResponse<CpeakIncomingMessag
     this.end();
   }
 
-  // Send a json data back to the client (for small json data, less than the highWaterMark)
-  json(data: any) {
-    // This is only good for bodies that their size is less than the highWaterMark value
+  // Send a json data back to the client.
+  // This is only good for bodies that their size is less than the highWaterMark value.
+  // Branches into compressAndSend (async) when compression was enabled at cpeak() construction.
+  json(data: any): void | Promise<void> {
+    const body = JSON.stringify(data);
+    if (this._compression) {
+      return compressAndSend(this, "application/json", body, this._compression);
+    }
     this.setHeader("Content-Type", "application/json");
-    this.end(JSON.stringify(data));
+    this.end(body);
+  }
+
+  // Explicit compression entry point. A developer can use this in any custom handler to compress arbitrary responses
+  compress(
+    mime: string,
+    body: Buffer | string | Readable,
+    size?: number
+  ): Promise<void> {
+    if (!this._compression) {
+      throw frameworkError(
+        "compression is not enabled. Pass `compression` to cpeak({ compression: true | { ... } }) to use res.compress.",
+        this.compress,
+        ErrorCode.COMPRESSION_NOT_ENABLED
+      );
+    }
+    return compressAndSend(this, mime, body, this._compression, size);
   }
 }
 
@@ -149,8 +195,9 @@ export class Cpeak {
   #routes: RoutesMap;
   #middleware: Middleware[];
   #handleErr?: (err: unknown, req: CpeakRequest, res: CpeakResponse) => void;
+  #compression?: ResolvedCompressionConfig;
 
-  constructor() {
+  constructor(options: CpeakOptions = {}) {
     this.#server = http.createServer({
       IncomingMessage: CpeakIncomingMessage,
       ServerResponse: CpeakServerResponse
@@ -158,9 +205,16 @@ export class Cpeak {
     this.#routes = {};
     this.#middleware = [];
 
+    // Resolve compression options once at app startup.
+    if (options.compression) {
+      this.#compression = resolveCompressionOptions(options.compression);
+    }
+
     this.#server.on(
       "request",
       async (req: CpeakRequest, res: CpeakResponse) => {
+        res._compression = this.#compression;
+
         // Get the url without the URL parameters (query strings)
         const qIndex = req.url?.indexOf("?");
         const urlWithoutQueries =
@@ -344,9 +398,18 @@ export {
   cookieParser,
   cors
 } from "./utils";
-export type { AuthOptions, PbkdfOptions, CookieOptions, CorsOptions } from "./utils/types";
 
 export type {
+  AuthOptions,
+  PbkdfOptions,
+  CookieOptions,
+  CorsOptions
+} from "./utils/types";
+
+export type { CompressionOptions } from "./internal/types";
+
+export type {
+  CpeakOptions,
   CpeakRequest,
   CpeakResponse,
   Next,
@@ -357,6 +420,6 @@ export type {
   RoutesMap
 } from "./types";
 
-export default function cpeak(): Cpeak {
-  return new Cpeak();
+export default function cpeak(options?: CpeakOptions): Cpeak {
+  return new Cpeak(options);
 }

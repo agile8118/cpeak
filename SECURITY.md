@@ -12,7 +12,7 @@ We're developing Cpeak with security at its core. We take all reported vulnerabi
 ## Reporting a Vulnerability
 
 If you discover a security vulnerability, please report it by
-[creating an issue](https://github.com/agile8118/cpeak/issues) on our GitHub
+[creating an issue](https://github.com/Cododev-Technology/cpeak/issues) on our GitHub
 repository and tagging it with the **security** label.
 
 We will review your report and respond as soon as possible. Thank you for your cooperation in helping us keep Cpeak secure!

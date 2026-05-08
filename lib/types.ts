@@ -1,6 +1,14 @@
 import { IncomingMessage, ServerResponse } from "node:http";
+import type { Readable } from "node:stream";
+import type { Buffer } from "node:buffer";
+import type { CompressionOptions } from "./internal/types";
 
 export type { Cpeak } from "./index";
+
+// For constructor options passed to `cpeak()`
+export interface CpeakOptions {
+  compression?: boolean | CompressionOptions;
+}
 
 // Extending Node.js's Request and Response objects to add our custom properties
 export type StringMap = Record<string, string>;
@@ -23,7 +31,12 @@ export interface CpeakResponse extends ServerResponse {
   attachment: (filename?: string) => CpeakResponse;
   cookie: (name: string, value: string, options?: any) => CpeakResponse;
   redirect: (location: string) => void;
-  json: (data: any) => void;
+  json: (data: any) => void | Promise<void>; // sync when compression is off, async when enabled
+  compress: (
+    mime: string,
+    body: Buffer | string | Readable,
+    size?: number
+  ) => Promise<void>;
   [key: string]: any; // allow developers to add their onw extensions (e.g. res.test)
 }
 

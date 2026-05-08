@@ -10,12 +10,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/agile8118/cpeak.git"
+    "url": "https://github.com/Cododev-Technology/cpeak.git"
   },
   "bugs": {
-    "url": "https://github.com/agile8118/cpeak/issues"
+    "url": "https://github.com/Cododev-Technology/cpeak/issues"
   },
-  "homepage": "https://github.com/agile8118/cpeak#readme",
+  "homepage": "https://github.com/Cododev-Technology/cpeak#readme",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
