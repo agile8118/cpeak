@@ -28,6 +28,7 @@ This is an educational project that was started as part of the [Understanding No
   - [URL Variables & Parameters](#url-variables--parameters)
   - [Sending Files](#sending-files)
   - [Redirecting](#redirecting)
+  - [Compression](#compression)
   - [Error Handling](#error-handling)
   - [Listening](#listening)
   - [Util Functions](#util-functions)
@@ -206,6 +207,54 @@ If you want to redirect to a new URL, you can simply do:
 ```javascript
 res.redirect("https://whatever.com");
 ```
+
+### Compression
+
+You can enable HTTP response compression at construction time. Once enabled, `serveStatic`, `res.json()` and `res.sendFile()` will compress eligible responses automatically, and you also get a `res.compress()` method on the response for custom payloads.
+
+Fire it up with the defaults like this:
+
+```javascript
+const server = cpeak({ compression: true });
+```
+
+Or pass options to tune the behavior:
+
+```javascript
+const server = cpeak({
+  compression: {
+    threshold: 1024, // bytes — responses smaller than this are sent uncompressed. Default: 1024
+    brotli: {},      // node:zlib BrotliOptions
+    gzip: {},        // node:zlib ZlibOptions
+    deflate: {}      // node:zlib ZlibOptions
+  }
+});
+```
+
+For arbitrary payloads, like a `Buffer`, `string`, or `Readable` stream, use `res.compress`:
+
+```javascript
+server.route("get", "/report", async (req, res) => {
+  const csv = await buildCsvReport();
+  await res.compress("text/csv", csv);
+});
+```
+
+When you're streaming, you can pass a known size as the third argument. Cpeak will use it to decide eligibility against `threshold`, and to set `Content-Length` if the body ends up being sent uncompressed:
+
+```javascript
+import { Readable } from "node:stream";
+
+server.route("get", "/proxy/feed", async (req, res) => {
+  const upstream = await fetch("https://example.com/feed.xml");
+  const size = Number(upstream.headers.get("content-length"));
+  await res.compress("application/xml", Readable.fromWeb(upstream.body), size);
+});
+```
+
+You must first enable compression at construction time to use `res.compress`. 
+
+One thing to keep in mind: when compression is enabled, `res.json()` returns a `Promise` because the work runs through async streams. You don't have to await it, but you can if you want to know when the response has been fully flushed.
 
 ### Error Handling
 
