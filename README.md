@@ -127,13 +127,13 @@ server.beforeEach((req, res, next) => {
 You can also add middleware functions for a particular route handler like this:
 
 ```javascript
-const requireAuth = (req, res, next, handleErr) => {
+const requireAuth = (req, res, next) => {
   // Check if user is logged in, if so then:
   req.test = "this is a test value";
   next();
 
   // If user is not logged in:
-  return handleErr({ status: 401, message: "Unauthorized" });
+  throw { status: 401, message: "Unauthorized" };
 };
 
 server.route("get", "/profile", requireAuth, (req, res) => {
@@ -681,11 +681,11 @@ server.beforeEach((req, res, next) => {
 });
 
 // A middleware function that can be specified to run before some particular routes
-const testRouteMiddleware = (req, res, next, handleErr) => {
+const testRouteMiddleware = (req, res, next) => {
   req.whatever = "some calculated value maybe";
 
   if (req.params.test !== "something special") {
-    return handleErr({ status: 400, message: "an error message" });
+    throw { status: 400, message: "an error message" };
   }
 
   next();
