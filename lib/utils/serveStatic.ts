@@ -25,15 +25,40 @@ const MIME_TYPES: StringMap = {
 
 const serveStatic = (
   folderPath: string,
-  newMimeTypes?: StringMap,
-  options?: { prefix?: string }
+  options?: { prefix?: string; live?: boolean; newMimeTypes?: StringMap }
 ) => {
   // For new user defined mime types
-  if (newMimeTypes) {
-    Object.assign(MIME_TYPES, newMimeTypes);
+  if (options?.newMimeTypes) {
+    Object.assign(MIME_TYPES, options?.newMimeTypes);
   }
 
   const prefix = options?.prefix ?? "";
+  const live = options?.live ?? false;
+
+  // This process the folder on every request, which is useful during development when files are changing often.
+  // In production, it's better to process the folder once and store the file paths in memory for faster access if file names are not changing often.
+  // If file names dynamically change often in production, then live option can be set to true to process the folder on every request, but it may have performance implications.
+  if (live) {
+    const resolvedFolder = path.resolve(folderPath);
+
+    return async function (req: CpeakRequest, res: CpeakResponse, next: Next) {
+      const url = req.url;
+      if (typeof url !== "string") return next();
+
+      const pathname = url.split("?")[0];
+      const unprefixed = prefix ? pathname.slice(prefix.length) : pathname;
+      const filePath = path.join(resolvedFolder, unprefixed);
+      const fileExtension = path.extname(filePath).slice(1);
+      const mime = MIME_TYPES[fileExtension];
+
+      if (!mime || !filePath.startsWith(resolvedFolder)) return next();
+
+      const stat = await fs.promises.stat(filePath).catch(() => null);
+      if (stat?.isFile()) return res.sendFile(filePath, mime);
+
+      next();
+    };
+  }
 
   function processFolder(folderPath: string, parentFolder: string) {
     const staticFiles: string[] = [];
