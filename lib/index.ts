@@ -379,6 +379,11 @@ export class Cpeak {
     return this.#server.close(cb);
   }
 
+  // A getter for developers who want to access the underlying http server instance for advanced use cases that aren't covered by Cpeak
+  get server() {
+    return this.#server;
+  }
+
   // ------------------------------
   // PRIVATE METHODS:
   // ------------------------------
