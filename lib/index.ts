@@ -2,6 +2,8 @@ import http from "node:http";
 import fs from "node:fs/promises";
 import { createReadStream } from "node:fs";
 import { pipeline } from "node:stream/promises";
+
+import type net from "node:net";
 import type { Readable } from "node:stream";
 import type { Buffer } from "node:buffer";
 
@@ -12,6 +14,7 @@ import {
 
 import type {
   StringMap,
+  CpeakHttpServer,
   CpeakOptions,
   CpeakRequest,
   CpeakResponse,
@@ -191,7 +194,7 @@ export class CpeakServerResponse extends http.ServerResponse<CpeakIncomingMessag
 }
 
 export class Cpeak {
-  #server: http.Server<typeof CpeakIncomingMessage, typeof CpeakServerResponse>;
+  #server: CpeakHttpServer;
   #routes: RoutesMap;
   #middleware: Middleware[];
   #handleErr?: (err: unknown, req: CpeakRequest, res: CpeakResponse) => void;
@@ -351,8 +354,12 @@ export class Cpeak {
     this.#handleErr = cb;
   }
 
-  listen(port: number, cb?: () => void) {
-    return this.#server.listen(port, cb);
+  // The first 3 listens are just TS overloads for better type inference and editor autocompletion. The last one is the actual implementation.
+  listen(port: number, cb?: () => void): CpeakHttpServer;
+  listen(port: number, host: string, cb?: () => void): CpeakHttpServer;
+  listen(options: net.ListenOptions, cb?: () => void): CpeakHttpServer;
+  listen(...args: any[]) {
+    return this.#server.listen(...args);
   }
 
   address() {
@@ -360,7 +367,7 @@ export class Cpeak {
   }
 
   close(cb?: (err?: Error) => void) {
-    this.#server.close(cb);
+    return this.#server.close(cb);
   }
 
   // ------------------------------
@@ -409,6 +416,7 @@ export type {
 export type { CompressionOptions } from "./internal/types";
 
 export type {
+  CpeakHttpServer,
   CpeakOptions,
   CpeakRequest,
   CpeakResponse,

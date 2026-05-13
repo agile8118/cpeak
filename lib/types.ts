@@ -1,9 +1,12 @@
-import { IncomingMessage, ServerResponse } from "node:http";
+import { IncomingMessage, ServerResponse, type Server } from "node:http";
 import type { Readable } from "node:stream";
 import type { Buffer } from "node:buffer";
 import type { CompressionOptions } from "./internal/types";
+import type { CpeakIncomingMessage, CpeakServerResponse } from "./index";
 
 export type { Cpeak } from "./index";
+
+export type CpeakHttpServer = Server<typeof CpeakIncomingMessage, typeof CpeakServerResponse>;
 
 // For constructor options passed to `cpeak()`
 export interface CpeakOptions {
