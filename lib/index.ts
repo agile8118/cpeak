@@ -172,14 +172,14 @@ export class CpeakServerResponse extends http.ServerResponse<CpeakIncomingMessag
 
   // Send a json data back to the client.
   // This is only good for bodies that their size is less than the highWaterMark value.
-  // Branches into compressAndSend (async) when compression was enabled at cpeak() construction.
-  json(data: any): void | Promise<void> {
+  json(data: any): Promise<void> {
     const body = JSON.stringify(data);
     if (this._compression) {
       return compressAndSend(this, "application/json", body, this._compression);
     }
     this.setHeader("Content-Type", "application/json");
     this.end(body);
+    return Promise.resolve();
   }
 
   // Explicit compression entry point. A developer can use this in any custom handler to compress arbitrary responses

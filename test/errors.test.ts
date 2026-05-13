@@ -43,7 +43,16 @@ describe("Error handling with handleErr", function () {
       }
     );
 
+    // Returning an async response method's promise lets the framework
+    // route the rejection to handleErr.
+    server.route("get", "/sendfile-returned", (req: CpeakRequest, res: CpeakResponse) => {
+      return res.sendFile("./test/files/test.unknownext");
+    });
+
     server.handleErr((error: any, req: CpeakRequest, res: CpeakResponse) => {
+      if (error?.code) {
+        return res.status(500).json({ code: error.code });
+      }
       return res.status(error.status).json({ error: error.message });
     });
 
@@ -64,5 +73,11 @@ describe("Error handling with handleErr", function () {
     const res = await request.patch("/foo/random?value=random");
     assert.strictEqual(res.status, 401);
     assert.deepStrictEqual(res.body, { error: "another error msg" });
+  });
+
+  it("should funnel async errors from a returned res.sendFile to handleErr", async function () {
+    const res = await request.get("/sendfile-returned");
+    assert.strictEqual(res.status, 500);
+    assert.strictEqual(res.body.code, "CPEAK_ERR_MISSING_MIME");
   });
 });

@@ -295,9 +295,7 @@ server.route("get", "/proxy/feed", async (req, res) => {
 });
 ```
 
-You must first enable compression at construction time to use `res.compress`. 
-
-One thing to keep in mind: when compression is enabled, `res.json()` returns a `Promise` because the work runs through async streams. You don't have to await it, but you can if you want to know when the response has been fully flushed.
+You must first enable compression at construction time to use `res.compress`.
 
 ### Error Handling
 
@@ -343,6 +341,23 @@ server.handleErr((error, req, res) => {
 ```
 
 _The error object is the object that you threw or passed to the `handleErr` function earlier in your routes._
+
+One thing to keep in mind: `res.sendFile`, `res.render`, `res.compress`, and `res.json` all return a `Promise`. **Return** that promise (or `await` it in an `async` handler) so the framework can route any rejection to `handleErr`:
+
+```javascript
+server.route("get", "/file", (req, res) => {
+  return res.sendFile("./images/sun.jpeg", "image/jpeg");
+});
+```
+
+Or, in an `async` handler that does other work alongside the send:
+
+```javascript
+server.route("get", "/avatars/:id", async (req, res) => {
+  const path = await db.lookupAvatarPath(req.params.id);
+  await res.sendFile(path);
+});
+```
 
 ### Listening
 

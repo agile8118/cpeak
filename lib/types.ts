@@ -35,7 +35,7 @@ export interface CpeakResponse extends ServerResponse {
   attachment: (filename?: string) => CpeakResponse;
   cookie: (name: string, value: string, options?: any) => CpeakResponse;
   redirect: (location: string) => void;
-  json: (data: any) => void | Promise<void>; // sync when compression is off, async when enabled
+  json: (data: any) => Promise<void>;
   compress: (
     mime: string,
     body: Buffer | string | Readable,

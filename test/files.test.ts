@@ -3,12 +3,7 @@ import supertest from "supertest";
 import fs from "node:fs/promises";
 import cpeak from "../lib/";
 
-import type {
-  Cpeak,
-  CpeakRequest,
-  CpeakResponse,
-  HandleErr
-} from "../lib/types";
+import type { Cpeak, CpeakRequest, CpeakResponse } from "../lib/types";
 
 const PORT = 7543;
 const request = supertest(`http://localhost:${PORT}`);
@@ -28,14 +23,6 @@ describe("Returning files with sendFile", function () {
       "/file-inferred",
       (req: CpeakRequest, res: CpeakResponse) => {
         res.status(200).sendFile("./test/files/test.txt");
-      }
-    );
-
-    server.route(
-      "get",
-      "/file-unknown-ext",
-      (req: CpeakRequest, res: CpeakResponse) => {
-        res.status(200).sendFile("./test/files/test.unknownext");
       }
     );
 
@@ -68,12 +55,5 @@ describe("Returning files with sendFile", function () {
     assert.strictEqual(res.status, 200);
     assert.strictEqual(res.headers["content-type"], "text/plain");
     assert.strictEqual(res.text, fileContent);
-  });
-
-  it("should surface a missing-mime error when the extension is unknown and no mime is passed", async function () {
-    const res = await request.get("/file-unknown-ext");
-
-    assert.strictEqual(res.status, 500);
-    assert.strictEqual(res.body.code, "CPEAK_ERR_MISSING_MIME");
   });
 });
