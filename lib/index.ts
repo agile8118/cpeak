@@ -12,6 +12,10 @@ import {
   compressAndSend
 } from "./internal/compression";
 import { MIME_TYPES } from "./internal/mimeTypes";
+import { Router } from "./internal/router";
+import { frameworkError, ErrorCode } from "./internal/errors";
+
+export { frameworkError, ErrorCode };
 
 import type {
   StringMap,
@@ -21,43 +25,10 @@ import type {
   CpeakResponse,
   Middleware,
   RouteMiddleware,
-  Handler,
-  RoutesMap
+  Handler
 } from "./types";
 
 import type { ResolvedCompressionConfig } from "./internal/types";
-
-// A utility function to create an error with a custom stack trace
-export function frameworkError(
-  message: string,
-  skipFn: Function,
-  code?: string,
-  status?: number
-) {
-  const err = new Error(message) as Error & {
-    code?: string;
-    cpeak_err?: boolean;
-  };
-  Error.captureStackTrace(err, skipFn);
-
-  err.cpeak_err = true;
-
-  if (code) err.code = code;
-  if (status) (err as any).status = status;
-
-  return err;
-}
-
-export enum ErrorCode {
-  MISSING_MIME = "CPEAK_ERR_MISSING_MIME",
-  FILE_NOT_FOUND = "CPEAK_ERR_FILE_NOT_FOUND",
-  NOT_A_FILE = "CPEAK_ERR_NOT_A_FILE",
-  SEND_FILE_FAIL = "CPEAK_ERR_SEND_FILE_FAIL",
-  INVALID_JSON = "CPEAK_ERR_INVALID_JSON",
-  PAYLOAD_TOO_LARGE = "CPEAK_ERR_PAYLOAD_TOO_LARGE",
-  WEAK_SECRET = "CPEAK_ERR_WEAK_SECRET",
-  COMPRESSION_NOT_ENABLED = "CPEAK_ERR_COMPRESSION_NOT_ENABLED"
-}
 
 export class CpeakIncomingMessage extends http.IncomingMessage {
   // We define body and params here for better V8 optimization (not changing the shape of the object at runtime)
@@ -201,7 +172,7 @@ export class CpeakServerResponse extends http.ServerResponse<CpeakIncomingMessag
 
 export class Cpeak {
   #server: CpeakHttpServer;
-  #routes: RoutesMap;
+  #router: Router;
   #middleware: Middleware[];
   #handleErr?: (err: unknown, req: CpeakRequest, res: CpeakResponse) => void;
   #compression?: ResolvedCompressionConfig;
@@ -211,7 +182,7 @@ export class Cpeak {
       IncomingMessage: CpeakIncomingMessage,
       ServerResponse: CpeakServerResponse
     });
-    this.#routes = {};
+    this.#router = new Router();
     this.#middleware = [];
 
     // Resolve compression options once at app startup.
@@ -303,30 +274,19 @@ export class Cpeak {
         ) => {
           // Our exit point...
           if (index === middleware.length) {
-            const routes = this.#routes[req.method?.toLowerCase() || ""];
-            if (routes && typeof routes[Symbol.iterator] === "function")
-              for (const route of routes) {
-                const match = urlWithoutQueries?.match(route.regex);
+            const method = req.method?.toLowerCase() || "";
+            const found = this.#router.find(method, urlWithoutQueries || "");
 
-                if (match) {
-                  // Parse the URL path variables from the matched route (like /users/:id)
-                  const pathVariables = this.#extractPathVariables(
-                    route.path,
-                    match
-                  );
-
-                  // We will call this params to be more familiar with other node.js frameworks.
-                  req.params = pathVariables;
-
-                  return await runHandler(
-                    req,
-                    res,
-                    route.middleware,
-                    route.cb,
-                    0
-                  );
-                }
-              }
+            if (found) {
+              req.params = found.params;
+              return await runHandler(
+                req,
+                res,
+                found.middleware,
+                found.handler,
+                0
+              );
+            }
 
             // If the requested route dose not exist, return 404
             return res
@@ -352,8 +312,6 @@ export class Cpeak {
   }
 
   route(method: string, path: string, ...args: (RouteMiddleware | Handler)[]) {
-    if (!this.#routes[method]) this.#routes[method] = [];
-
     // The last argument should always be our handler
     const cb = args.pop() as Handler;
 
@@ -364,8 +322,7 @@ export class Cpeak {
     // Rest will be our middleware functions
     const middleware = args.flat() as RouteMiddleware[];
 
-    const regex = this.#pathToRegex(path);
-    this.#routes[method].push({ path, regex, middleware, cb });
+    this.#router.add(method, path, middleware, cb);
   }
 
   beforeEach(cb: Middleware) {
@@ -395,28 +352,6 @@ export class Cpeak {
   // A getter for developers who want to access the underlying http server instance for advanced use cases that aren't covered by Cpeak
   get server() {
     return this.#server;
-  }
-
-  // ------------------------------
-  // PRIVATE METHODS:
-  // ------------------------------
-  #pathToRegex(path: string) {
-    const regexString =
-      "^" + path.replace(/:\w+/g, "([^/]+)").replace(/\*/g, ".*") + "$";
-
-    return new RegExp(regexString);
-  }
-
-  #extractPathVariables(path: string, match: RegExpMatchArray) {
-    // Extract path url variable values from the matched route
-    const paramNames = (path.match(/:\w+/g) || []).map((param) =>
-      param.slice(1)
-    );
-    const params: StringMap = {};
-    paramNames.forEach((name, index) => {
-      params[name] = match[index + 1];
-    });
-    return params;
   }
 }
 
@@ -450,8 +385,7 @@ export type {
   Next,
   Middleware,
   RouteMiddleware,
-  Handler,
-  RoutesMap
+  Handler
 } from "./types";
 
 export default function cpeak(options?: CpeakOptions): Cpeak {

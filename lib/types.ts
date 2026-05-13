@@ -66,15 +66,9 @@ export type Handler<ReqBody = any, ReqParams = any> = (
   res: CpeakResponse
 ) => void | Promise<void>;
 
-// For a route object value in Cpeak.routes. The key is the method name.
+// Represents a single registered route.
 export interface Route {
   path: string;
-  regex: RegExp;
   middleware: RouteMiddleware[];
   cb: Handler;
-}
-
-// For Cpeak.routes:
-export interface RoutesMap {
-  [method: string]: Route[];
 }
