@@ -61,7 +61,7 @@ import cpeak from "cpeak";
 const server = cpeak();
 
 server.route("get", "/", (req, res) => {
-  res.json({ message: "Hi there!" });
+  return res.json({ message: "Hi there!" });
 });
 
 server.listen(3000, () => {
@@ -204,7 +204,7 @@ The file’s binary content will be in the HTTP response body content. Make sure
 The MIME type argument is optional. When omitted, Cpeak infers it from the file extension using its built-in MIME registry (see [MIME Types](#mime-types)):
 
 ```javascript
-res.status(200).sendFile("./images/sun.jpeg");
+return res.status(200).sendFile("./images/sun.jpeg");
 ```
 
 Passing the MIME type explicitly is the fastest path, Cpeak skips the extension lookup entirely.
@@ -311,38 +311,25 @@ server.route("get", "/api/document/:title", (req, res) => {
 });
 ```
 
-You can also make use of the `handleErr` callback function like this:
-
-```javascript
-server.route("get", "/api/document/:title", (req, res, handleErr) => {
-  const title = req.params.title;
-
-  if (title.length > 500)
-    return handleErr({ status: 400, message: "Title too long." });
-
-  // The rest of your logic...
-});
-```
-
-**Make sure** to call the `server.handleErr` and pass a function like this to have the automatic error handler work properly:
+**Make sure** to call `server.handleErr` and pass a function like this to have the automatic error handler work properly:
 
 ```javascript
 server.handleErr((error, req, res) => {
   if (error && error.status) {
-    res.status(error.status).json({ error: error.message });
+    return res.status(error.status).json({ error: error.message });
   } else {
     // Log the unexpected errors somewhere so you can keep track of them...
     console.error(error);
-    res.status(500).json({
+    return res.status(500).json({
       error: "Sorry, something unexpected happened on our side."
     });
   }
 });
 ```
 
-_The error object is the object that you threw or passed to the `handleErr` function earlier in your routes._
+_The error object is the object that you threw earlier in your routes or middleware._
 
-One thing to keep in mind: `res.sendFile`, `res.render`, `res.compress`, and `res.json` all return a `Promise`. **Return** that promise (or `await` it in an `async` handler) so the framework can route any rejection to `handleErr`:
+One thing to keep in mind: `res.sendFile`, `res.render`, `res.compress`, and `res.json` all return a `Promise`. **Return** that promise (or `await` it in an `async` handler) so the framework can route any rejection to your `handleErr`:
 
 ```javascript
 server.route("get", "/file", (req, res) => {
@@ -437,7 +424,7 @@ server.route("put", "/api/user", (req, res) => {
   // rest of your logic...
 
   // Sending JSON in the HTTP response:
-  res.status(201).json({ message: "Something was created..." });
+  return res.status(201).json({ message: "Something was created..." });
 });
 ```
 
@@ -507,7 +494,7 @@ server.route("get", "/dashboard", (req, res) => {
   // Signed cookies — returns false if the signature is invalid or the value was tampered with
   const userId = req.signedCookies.userId;
 
-  res.status(200).json({ theme, userId });
+  return res.status(200).json({ theme, userId });
 });
 ```
 
@@ -521,7 +508,7 @@ server.route("post", "/login", (req, res) => {
   // A signed cookie
   res.cookie("userId", "abc123", { signed: true, httpOnly: true, secure: true });
 
-  res.status(200).json({ message: "Logged in" });
+  return res.status(200).json({ message: "Logged in" });
 });
 ```
 
@@ -764,7 +751,7 @@ server.route("get", "/api/document/:title", testRouteMiddleware, (req, res) => {
     throw { status: 400, message: "Invalid property." };
 
   // Sending a JSON response
-  res.status(200).json({ message: "This is a test response" });
+  return res.status(200).json({ message: "This is a test response" });
 });
 
 // Reading and setting cookies
@@ -774,22 +761,22 @@ server.route("post", "/login", (req, res) => {
 
   // Set a signed session cookie
   res.cookie("sessionId", "abc123", { signed: true, httpOnly: true, secure: true });
-  res.status(200).json({ message: "Logged in" });
+  return res.status(200).json({ message: "Logged in" });
 });
 
 // Sending a file response
 server.route("get", "/file", (req, res) => {
   // Make sure to specify a correct path and MIME type...
-  res.status(200).sendFile("<path-to-file-relative-to-cwd>", "<mime-type>");
+  return res.status(200).sendFile("<path-to-file-relative-to-cwd>", "<mime-type>");
 });
 
 // Handle all the errors that could happen in the routes
 server.handleErr((error, req, res) => {
   if (error && error.status) {
-    res.status(error.status).json({ error: error.message });
+    return res.status(error.status).json({ error: error.message });
   } else {
     console.error(error);
-    res.status(500).json({
+    return res.status(500).json({
       error: "Sorry, something unexpected happened from our side."
     });
   }

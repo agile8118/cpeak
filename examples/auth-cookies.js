@@ -57,7 +57,7 @@ app.route("post", "/register", async (req, res) => {
 
   // The token is stored in an httpOnly cookie so it's never accessible via JavaScript, which protects against XSS attacks.
   res.cookie("session", token, { httpOnly: true, secure: true, sameSite: "lax" });
-  res.status(201).json({ ok: true });
+  return res.status(201).json({ ok: true });
 })
 
 app.route("post", "/login", async (req, res) => {
@@ -76,11 +76,11 @@ app.route("post", "/login", async (req, res) => {
 
   // The token is stored in an httpOnly cookie so it's never accessible via JavaScript, which protects against XSS attacks.
   res.cookie("session", token, { httpOnly: true, secure: true, sameSite: "lax" });
-  res.json({ ok: true });
+  return res.json({ ok: true });
 });
 
 app.route("get", "/profile", requireAuth, async (req, res) => {
-  res.json({ user: req.user });
+  return res.json({ user: req.user });
 });
 
 app.route('delete', '/logout', requireAuth, async (req, res) => {
@@ -89,16 +89,16 @@ app.route('delete', '/logout', requireAuth, async (req, res) => {
 
   // It is your responsibility to clear the token from the client side as well.
   res.clearCookie("session");
-  res.status(200).json({ message: "logged out" });
+  return res.status(200).json({ message: "logged out" });
 });
 
 // Global error handler
 app.handleErr((error, req, res) => {
   if (error && error.status) {
-    res.status(error.status).json({ error: error.message });
+    return res.status(error.status).json({ error: error.message });
   } else {
     console.error(error);
-    res.status(500).json({
+    return res.status(500).json({
       error: "Sorry, something unexpected happened from our side."
     });
   }

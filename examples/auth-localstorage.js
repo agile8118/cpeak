@@ -74,7 +74,7 @@ app.route("post", "/register", async (req, res) => {
   users.push(user);
 
   const token = await req.login({ password, hashedPassword: hash, userId: String(user.id) });
-  res.status(201).json({ token });
+  return res.status(201).json({ token });
 })
 
 app.route("post", "/login", async (req, res) => {
@@ -88,17 +88,17 @@ app.route("post", "/login", async (req, res) => {
   // The client will then save this token and send it in the Authorization header for subsequent requests to protected routes.
   // You can optionally set this as a cookie as well. See the auth-cookies.js example.
   const token = await req.login({ password, hashedPassword: user.password, userId: String(user.id) });
-  res.json({ token });
+  return res.json({ token });
 });
 
 app.route("get", "/profile", requireAuth, async (req, res) => {
-  res.json({ user: req.user });
+  return res.json({ user: req.user });
 });
 
 app.route('delete', '/logout', requireAuth, async (req, res) => {
   const token = req.headers["authorization"];
   if (token) await req.logout(token);
-  res.status(200).json({ message: "logged out" });
+  return res.status(200).json({ message: "logged out" });
 
   // If you want to revoke all tokens for a user, you can do it like this if using SQL:
   // DELETE FROM tokens WHERE user_id = $1;
@@ -107,10 +107,10 @@ app.route('delete', '/logout', requireAuth, async (req, res) => {
 // Global error handler
 app.handleErr((error, req, res) => {
   if (error && error.status) {
-    res.status(error.status).json({ error: error.message });
+    return res.status(error.status).json({ error: error.message });
   } else {
     console.error(error);
-    res.status(500).json({
+    return res.status(500).json({
       error: "Sorry, something unexpected happened from our side."
     });
   }

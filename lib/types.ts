@@ -45,7 +45,6 @@ export interface CpeakResponse extends ServerResponse {
 }
 
 export type Next = (err?: any) => void;
-export type HandleErr = (err: any) => void;
 
 // beforeEach middleware: (req, res, next)
 export type Middleware<ReqBody = any, ReqParams = any> = (
@@ -54,19 +53,17 @@ export type Middleware<ReqBody = any, ReqParams = any> = (
   next: Next
 ) => void;
 
-// Route middleware:      (req, res, next, handleErr)
+// Route middleware: (req, res, next)
 export type RouteMiddleware<ReqBody = any, ReqParams = any> = (
   req: CpeakRequest<ReqBody, ReqParams>,
   res: CpeakResponse,
-  next: Next,
-  handleErr: HandleErr
+  next: Next
 ) => void | Promise<void>;
 
-// Route handlers: (req, res, handleErr)
+// Route handlers: (req, res). To signal an error, throw it.
 export type Handler<ReqBody = any, ReqParams = any> = (
   req: CpeakRequest<ReqBody, ReqParams>,
-  res: CpeakResponse,
-  handleErr: HandleErr
+  res: CpeakResponse
 ) => void | Promise<void>;
 
 // For a route object value in Cpeak.routes. The key is the method name.

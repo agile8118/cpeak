@@ -6,8 +6,7 @@ import cpeak from "../lib/";
 import type {
   Cpeak,
   CpeakRequest,
-  CpeakResponse,
-  HandleErr
+  CpeakResponse
 } from "../lib/types";
 
 const PORT = 7543;
@@ -32,11 +31,11 @@ describe("Error handling with handleErr", function () {
       "patch",
       "/foo/:bar",
       mid1,
-      (req: CpeakRequest, res: CpeakResponse, handleErr: HandleErr) => {
+      (req: CpeakRequest, res: CpeakResponse) => {
         const bar = req.params?.bar;
 
         if (bar === "random") {
-          return handleErr({ status: 403, message: "an error msg" });
+          throw { status: 403, message: "an error msg" };
         }
 
         return res.status(200).json({ bar });
@@ -45,9 +44,13 @@ describe("Error handling with handleErr", function () {
 
     // Returning an async response method's promise lets the framework
     // route the rejection to handleErr.
-    server.route("get", "/sendfile-returned", (req: CpeakRequest, res: CpeakResponse) => {
-      return res.sendFile("./test/files/test.unknownext");
-    });
+    server.route(
+      "get",
+      "/sendfile-returned",
+      (req: CpeakRequest, res: CpeakResponse) => {
+        return res.sendFile("./test/files/test.unknownext");
+      }
+    );
 
     server.handleErr((error: any, req: CpeakRequest, res: CpeakResponse) => {
       if (error?.code) {
@@ -56,6 +59,16 @@ describe("Error handling with handleErr", function () {
       return res.status(error.status).json({ error: error.message });
     });
 
+    server.route(
+      "get",
+      "/handle-err-broken-json",
+      (req: CpeakRequest, res: CpeakResponse) => {
+        // Mimics res.json rejecting under compression (zlib failure, socket closed mid-stream, etc.)
+        res.json = () => Promise.reject(new Error("simulated json rejection"));
+        throw { status: 500, message: "trigger handleErr" };
+      }
+    );
+
     server.listen(PORT, done);
   });
 
@@ -63,13 +76,13 @@ describe("Error handling with handleErr", function () {
     server.close(done);
   });
 
-  it("should get an error using the handleErr function from a router", async function () {
+  it("should route a thrown error from a handler to handleErr", async function () {
     const res = await request.patch("/foo/random");
     assert.strictEqual(res.status, 403);
     assert.deepStrictEqual(res.body, { error: "an error msg" });
   });
 
-  it("should get an error using the handleErr function from a middleware", async function () {
+  it("should route a thrown error from a middleware to handleErr", async function () {
     const res = await request.patch("/foo/random?value=random");
     assert.strictEqual(res.status, 401);
     assert.deepStrictEqual(res.body, { error: "another error msg" });
@@ -79,5 +92,10 @@ describe("Error handling with handleErr", function () {
     const res = await request.get("/sendfile-returned");
     assert.strictEqual(res.status, 500);
     assert.strictEqual(res.body.code, "CPEAK_ERR_MISSING_MIME");
+  });
+
+  it("should still respond with 500 when res.json inside handleErr rejects", async function () {
+    const res = await request.get("/handle-err-broken-json");
+    assert.strictEqual(res.status, 500);
   });
 });
