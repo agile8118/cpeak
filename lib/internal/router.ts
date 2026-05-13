@@ -5,12 +5,27 @@ import { frameworkError, ErrorCode } from "./errors";
 // an exact static segment, a single ":param" placeholder, or a tail "*"
 // wildcard. The handler and middleware here belong to the route whose path
 // ends at this node, if any.
+//
+// Param names are not stored on the tree edges. We capture values positionally
+// as we walk, and zip them with the param names attached to whichever leaf we
+// land on. That lets two routes share the same param slot in the tree even
+// when they use different names, like "/:id/profile" and "/:username/settings".
 interface RadixNode {
   staticChildren: Map<string, RadixNode>;
-  paramChild?: { name: string; node: RadixNode };
-  wildcardChild?: { handler: Handler; middleware: RouteMiddleware[] };
+  paramChild?: RadixNode;
+  wildcardChild?: WildcardLeaf;
   handler?: Handler;
   middleware?: RouteMiddleware[];
+  // Names of params captured along the path to this leaf, in order. Only set
+  // on nodes that own a handler.
+  paramNames?: string[];
+}
+
+interface WildcardLeaf {
+  handler: Handler;
+  middleware: RouteMiddleware[];
+  // Names of params captured before reaching this wildcard, in order.
+  paramNames: string[];
 }
 
 export interface RouteMatch {
@@ -43,6 +58,7 @@ export class Router {
     }
 
     const segments = splitPath(path);
+    const paramNames: string[] = [];
     let currentNode = root;
 
     for (let i = 0; i < segments.length; i++) {
@@ -76,14 +92,14 @@ export class Router {
             ErrorCode.DUPLICATE_ROUTE
           );
         }
-        currentNode.wildcardChild = { handler, middleware };
+        currentNode.wildcardChild = { handler, middleware, paramNames };
         return;
       }
 
       // A ":name" segment walks into the param branch at this depth, or
-      // creates one. We allow only one param name per position. Two routes
-      // that disagree on the param name at the same spot would be ambiguous
-      // to the matcher, so we flag it instead of silently picking one.
+      // creates one. The name is collected positionally and resolved later
+      // at the leaf, so two routes can disagree on the param name here as
+      // long as their paths diverge before the leaf.
       if (segment.startsWith(":")) {
         const paramName = segment.slice(1);
         if (!paramName) {
@@ -93,20 +109,11 @@ export class Router {
             ErrorCode.INVALID_ROUTE
           );
         }
-        if (currentNode.paramChild) {
-          if (currentNode.paramChild.name !== paramName) {
-            throw frameworkError(
-              `Route conflict for ${method.toUpperCase()} ${path}: parameter ":${paramName}" conflicts with existing ":${currentNode.paramChild.name}" at the same position.`,
-              this.add,
-              ErrorCode.PARAM_CONFLICT
-            );
-          }
-          currentNode = currentNode.paramChild.node;
-        } else {
-          const nextNode = createNode();
-          currentNode.paramChild = { name: paramName, node: nextNode };
-          currentNode = nextNode;
+        paramNames.push(paramName);
+        if (!currentNode.paramChild) {
+          currentNode.paramChild = createNode();
         }
+        currentNode = currentNode.paramChild;
         continue;
       }
 
@@ -131,6 +138,7 @@ export class Router {
     }
     currentNode.handler = handler;
     currentNode.middleware = middleware;
+    currentNode.paramNames = paramNames;
   }
 
   find(method: string, path: string): RouteMatch | null {
@@ -138,8 +146,7 @@ export class Router {
     if (!root) return null;
 
     const segments = splitPath(path);
-    const params: StringMap = {};
-    return matchSegments(root, segments, 0, params);
+    return matchSegments(root, segments, 0, []);
   }
 }
 
@@ -149,24 +156,33 @@ export class Router {
 // and recursion lets us unwind a failed path, the matcher also backtracks.
 // If the static branch dead-ends deeper down, we come back up and try the
 // param sibling with the same segment value.
+//
+// We collect captured param values positionally as we walk. The actual names
+// get zipped in at the terminal leaf, using the paramNames stored alongside
+// the handler. That way the same captured value can be called "id" on one
+// route and "username" on another without the tree caring.
 function matchSegments(
   node: RadixNode,
   segments: string[],
   segmentIndex: number,
-  params: StringMap
+  capturedValues: string[]
 ): RouteMatch | null {
   // Out of segments to walk. If this node has a handler, that's our match.
   // Otherwise let a wildcard at this depth catch the empty remainder so
   // routes like "/foo/*" still match a request to "/foo".
   if (segmentIndex === segments.length) {
     if (node.handler) {
-      return { middleware: node.middleware!, handler: node.handler, params };
+      return {
+        middleware: node.middleware!,
+        handler: node.handler,
+        params: zipParams(node.paramNames!, capturedValues)
+      };
     }
     if (node.wildcardChild) {
       return {
         middleware: node.wildcardChild.middleware,
         handler: node.wildcardChild.handler,
-        params
+        params: zipParams(node.wildcardChild.paramNames, capturedValues)
       };
     }
     return null;
@@ -181,25 +197,24 @@ function matchSegments(
       staticChild,
       segments,
       segmentIndex + 1,
-      params
+      capturedValues
     );
     if (foundMatch) return foundMatch;
   }
 
-  // Then try the param branch. We capture the value before recursing so
-  // the handler will see it. If the recursion fails, we have to remove the
-  // value again so any sibling branch (or the caller unwinding above us)
-  // sees a clean params map.
+  // Then try the param branch. We push the captured value before recursing
+  // and pop it back off if the recursion fails, so any sibling branch (or the
+  // caller unwinding above us) sees a clean capture list.
   if (node.paramChild) {
-    params[node.paramChild.name] = safeDecode(segment);
+    capturedValues.push(safeDecode(segment));
     const foundMatch = matchSegments(
-      node.paramChild.node,
+      node.paramChild,
       segments,
       segmentIndex + 1,
-      params
+      capturedValues
     );
     if (foundMatch) return foundMatch;
-    delete params[node.paramChild.name];
+    capturedValues.pop();
   }
 
   // Last resort. A wildcard at this node swallows whatever segments remain.
@@ -207,11 +222,19 @@ function matchSegments(
     return {
       middleware: node.wildcardChild.middleware,
       handler: node.wildcardChild.handler,
-      params
+      params: zipParams(node.wildcardChild.paramNames, capturedValues)
     };
   }
 
   return null;
+}
+
+function zipParams(names: string[], values: string[]): StringMap {
+  const params: StringMap = {};
+  for (let i = 0; i < names.length; i++) {
+    params[names[i]] = values[i];
+  }
+  return params;
 }
 
 // Decode a URL segment without ever throwing. Malformed percent encoding is

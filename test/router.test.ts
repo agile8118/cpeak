@@ -76,6 +76,23 @@ describe("Routing logic & URL & query parameters", function () {
       }
     );
 
+    // Same param slot at /lookup/:_, but the leaves diverge so each route gets
+    // its own param name on the captured value.
+    server.route(
+      "get",
+      "/lookup/:userId",
+      (req: CpeakRequest, res: CpeakResponse) => {
+        res.status(200).json({ matched: "lookup-user", params: req.params });
+      }
+    );
+    server.route(
+      "get",
+      "/lookup/:slug/posts",
+      (req: CpeakRequest, res: CpeakResponse) => {
+        res.status(200).json({ matched: "lookup-slug-posts", params: req.params });
+      }
+    );
+
     // Final fallback for any unmatched GET.
     server.route("get", "*", (req: CpeakRequest, res: CpeakResponse) => {
       res.status(200).json({ matched: "root-wildcard" });
@@ -166,24 +183,19 @@ describe("Routing logic & URL & query parameters", function () {
     assert.deepStrictEqual(res.body, { error: "Cannot PATCH /random" });
   });
 
-  it("should throw on same method, same position param name conflict", function () {
-    const s = cpeak();
-    s.route(
-      "get",
-      "/users/:id/profile",
-      (req: CpeakRequest, res: CpeakResponse) => res.json({})
-    );
+  it("should allow different param names at the same position when the paths diverge", async function () {
+    const single = await request.get("/lookup/abc");
+    assert.strictEqual(single.status, 200);
+    assert.deepStrictEqual(single.body, {
+      matched: "lookup-user",
+      params: { userId: "abc" }
+    });
 
-    let err: any;
-    try {
-      s.route(
-        "get",
-        "/users/:username/settings",
-        (req: CpeakRequest, res: CpeakResponse) => res.json({})
-      );
-    } catch (e) {
-      err = e;
-    }
-    assert.strictEqual(err?.code, ErrorCode.PARAM_CONFLICT);
+    const deeper = await request.get("/lookup/abc/posts");
+    assert.strictEqual(deeper.status, 200);
+    assert.deepStrictEqual(deeper.body, {
+      matched: "lookup-slug-posts",
+      params: { slug: "abc" }
+    });
   });
 });
