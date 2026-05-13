@@ -11,6 +11,7 @@ import {
   resolveCompressionOptions,
   compressAndSend
 } from "./internal/compression";
+import { MIME_TYPES } from "./internal/mimeTypes";
 
 import type {
   StringMap,
@@ -91,13 +92,18 @@ export class CpeakServerResponse extends http.ServerResponse<CpeakIncomingMessag
   _compression?: ResolvedCompressionConfig;
 
   // Send a file back to the client
-  async sendFile(path: string, mime: string) {
+  async sendFile(path: string, mime?: string) {
     if (!mime) {
-      throw frameworkError(
-        'MIME type is missing. Use res.sendFile(path, "mime-type").',
-        this.sendFile,
-        ErrorCode.MISSING_MIME
-      );
+      const dotIndex = path.lastIndexOf(".");
+      const fileExtension = dotIndex >= 0 ? path.slice(dotIndex + 1) : "";
+      mime = MIME_TYPES[fileExtension];
+      if (!mime) {
+        throw frameworkError(
+          `MIME type is missing for "${path}". Pass it as the second argument or register the extension via cpeak({ mimeTypes: { ${fileExtension || "ext"}: "..." } }).`,
+          this.sendFile,
+          ErrorCode.MISSING_MIME
+        );
+      }
     }
 
     try {
@@ -212,6 +218,9 @@ export class Cpeak {
     if (options.compression) {
       this.#compression = resolveCompressionOptions(options.compression);
     }
+
+    // Merge developer-supplied mime types with the defaults once at startup
+    if (options.mimeTypes) Object.assign(MIME_TYPES, options.mimeTypes);
 
     this.#server.on(
       "request",

@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import { frameworkError } from "../";
 import { compressAndSend } from "../internal/compression";
+import { MIME_TYPES } from "../internal/mimeTypes";
 import type { CpeakRequest, CpeakResponse, Next } from "../types";
 
 function renderTemplate(
@@ -59,14 +60,18 @@ const render = () => {
     res.render = async (
       path: string,
       data: Record<string, unknown>,
-      mime: string
+      mime?: string
     ) => {
-      // check if mime is specified, if not return an error
       if (!mime) {
-        throw frameworkError(
-          `MIME type is missing. You called res.render("${path}", ...) but forgot to provide the third "mime" argument.`,
-          res.render
-        );
+        const dotIndex = path.lastIndexOf(".");
+        const fileExtension = dotIndex >= 0 ? path.slice(dotIndex + 1) : "";
+        mime = MIME_TYPES[fileExtension];
+        if (!mime) {
+          throw frameworkError(
+            `MIME type is missing for "${path}". Pass it as the third argument or register the extension via cpeak({ mimeTypes: { ${fileExtension || "ext"}: "..." } }).`,
+            res.render
+          );
+        }
       }
 
       let fileStr = await fs.readFile(path, "utf-8");

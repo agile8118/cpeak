@@ -23,6 +23,26 @@ describe("Returning files with sendFile", function () {
       res.status(200).sendFile("./test/files/test.txt", "text/plain");
     });
 
+    server.route(
+      "get",
+      "/file-inferred",
+      (req: CpeakRequest, res: CpeakResponse) => {
+        res.status(200).sendFile("./test/files/test.txt");
+      }
+    );
+
+    server.route(
+      "get",
+      "/file-unknown-ext",
+      (req: CpeakRequest, res: CpeakResponse) => {
+        res.status(200).sendFile("./test/files/test.unknownext");
+      }
+    );
+
+    server.handleErr((error: any, req: CpeakRequest, res: CpeakResponse) => {
+      res.status(500).json({ code: error?.code, message: error?.message });
+    });
+
     server.listen(PORT, done);
   });
 
@@ -38,5 +58,22 @@ describe("Returning files with sendFile", function () {
     assert.strictEqual(res.status, 200);
     assert.strictEqual(res.headers["content-type"], "text/plain");
     assert.strictEqual(res.text, fileContent);
+  });
+
+  it("should infer the MIME type from the file extension when omitted", async function () {
+    const res = await request.get("/file-inferred");
+
+    const fileContent = await fs.readFile("./test/files/test.txt", "utf-8");
+
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.headers["content-type"], "text/plain");
+    assert.strictEqual(res.text, fileContent);
+  });
+
+  it("should surface a missing-mime error when the extension is unknown and no mime is passed", async function () {
+    const res = await request.get("/file-unknown-ext");
+
+    assert.strictEqual(res.status, 500);
+    assert.strictEqual(res.body.code, "CPEAK_ERR_MISSING_MIME");
   });
 });

@@ -11,6 +11,7 @@ export type CpeakHttpServer = Server<typeof CpeakIncomingMessage, typeof CpeakSe
 // For constructor options passed to `cpeak()`
 export interface CpeakOptions {
   compression?: boolean | CompressionOptions;
+  mimeTypes?: StringMap;
 }
 
 // Extending Node.js's Request and Response objects to add our custom properties
@@ -29,7 +30,7 @@ export interface CpeakRequest<
 }
 
 export interface CpeakResponse extends ServerResponse {
-  sendFile: (path: string, mime: string) => Promise<void>;
+  sendFile: (path: string, mime?: string) => Promise<void>;
   status: (code: number) => CpeakResponse;
   attachment: (filename?: string) => CpeakResponse;
   cookie: (name: string, value: string, options?: any) => CpeakResponse;

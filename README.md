@@ -28,6 +28,7 @@ This is an educational project that was started as part of the [Understanding No
   - [URL Variables & Parameters](#url-variables--parameters)
   - [Sending Files](#sending-files)
   - [Redirecting](#redirecting)
+  - [MIME Types](#mime-types)
   - [Compression](#compression)
   - [Error Handling](#error-handling)
   - [Listening](#listening)
@@ -198,7 +199,15 @@ server.route("get", "/testing", (req, res) => {
 });
 ```
 
-The file’s binary content will be in the HTTP response body content. Make sure you specify a correct path relative to your CWD (use the `path` module for better compatibility) and also the correct HTTP MIME type for that file.
+The file’s binary content will be in the HTTP response body content. Make sure you specify a correct path relative to your CWD (use the `path` module for better compatibility).
+
+The MIME type argument is optional. When omitted, Cpeak infers it from the file extension using its built-in MIME registry (see [MIME Types](#mime-types)):
+
+```javascript
+res.status(200).sendFile("./images/sun.jpeg");
+```
+
+Passing the MIME type explicitly is the fastest path, Cpeak skips the extension lookup entirely.
 
 ### Redirecting
 
@@ -207,6 +216,40 @@ If you want to redirect to a new URL, you can simply do:
 ```javascript
 res.redirect("https://whatever.com");
 ```
+
+### MIME Types
+
+`serveStatic`, `res.sendFile`, and `res.render` all share a single MIME type registry. Out of the box it covers the common web types:
+
+```
+  html: "text/html",
+  css: "text/css",
+  js: "application/javascript",
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  png: "image/png",
+  svg: "image/svg+xml",
+  gif: "image/gif",
+  ico: "image/x-icon",
+  txt: "text/plain",
+  json: "application/json",
+  webmanifest: "application/manifest+json",
+  eot: "application/vnd.ms-fontobject",
+  otf: "font/otf",
+  ttf: "font/ttf",
+  woff: "font/woff",
+  woff2: "font/woff2"
+```
+
+If you need to serve something else, register it once on the `cpeak()` constructor:
+
+```javascript
+const server = cpeak({
+  mimeTypes: { mp3: "audio/mpeg", m4a: "audio/mp4" }
+});
+```
+
+We keep this list small on purpose. Cpeak isn't going to load the [thousands of MIME types from the IANA registry](https://www.iana.org/assignments/media-types/media-types.xhtml) into your process memory on the off chance you might serve an `.apk` or a `.fla` one day. You tell us what you serve, we keep memory tight.
 
 ### Compression
 
@@ -311,6 +354,8 @@ server.listen(3000, () => {
 });
 ```
 
+`server.listen` accepts the same arguments as Node.js's [http.Server.listen](https://nodejs.org/docs/latest/api/net.html#serverlistenoptions-callback), so you can also pass a host, an options object, or a Unix socket path.
+
 ### Util Functions
 
 There are utility functions that you can include and use as middleware functions. These are meant to make it easier for you to build HTTP applications. In the future, many more will be added, and you only move them into memory once you include them. No need to have many npm dependencies for simple applications!
@@ -336,44 +381,26 @@ import cpeak, { utilName } from "cpeak";
 With this middleware function, you can automatically set a folder in your project to be served by Cpeak. Here’s how to set it up:
 
 ```javascript
-server.beforeEach(
-  serveStatic("./public", {
-    mp3: "audio/mpeg"
-  })
-);
+server.beforeEach(serveStatic("./public"));
 ```
 
-If you have file types in your public folder that are not one of the following, make sure to add the MIME types manually as the second argument in the function as an object where each property key is the file extension, and each value is the correct MIME type for that. You can see all the available MIME types on the [IANA website](https://www.iana.org/assignments/media-types/media-types.xhtml).
+`serveStatic` infers each file's MIME type from its extension. If your folder contains types that aren't in the built-in registry, register them on the `cpeak()` constructor (see [MIME Types](#mime-types)).
 
-```
-  html: "text/html",
-  css: "text/css",
-  js: "application/javascript",
-  jpg: "image/jpeg",
-  jpeg: "image/jpeg",
-  png: "image/png",
-  svg: "image/svg+xml",
-  gif: "image/gif",
-  ico: "image/x-icon",
-  txt: "text/plain",
-  json: "application/json",
-  webmanifest: "application/manifest+json",
-  eot: "application/vnd.ms-fontobject",
-  otf: "font/otf",
-  ttf: "font/ttf",
-  woff: "font/woff",
-  woff2: "font/woff2"
-```
-
-You can also serve your static files under a URL prefix by passing a third argument with a `prefix` option. This is useful when you want all static assets to live under a specific path like `/static`:
+You can also serve your static files under a URL prefix by passing a `prefix` option. This is useful when you want all static assets to live under a specific path like `/static`:
 
 ```javascript
 server.beforeEach(
-  serveStatic("./public", null, { prefix: "/static" })
+  serveStatic("./public", { prefix: "/static" })
 );
 ```
 
-With this setup, a file at `./public/app.js` would be served at `/static/app.js` instead of `/app.js`. Pass `null` as the second argument if you don’t need any custom MIME types.
+With this setup, a file at `./public/app.js` would be served at `/static/app.js` instead of `/app.js`.
+
+If file names in the served folder change while the server is running (e.g. during development), pass `live: true` so the middleware stats the disk on each request instead of caching the file map at startup:
+
+```javascript
+server.beforeEach(serveStatic("./public", { live: true }));
+```
 
 #### parseJSON
 
@@ -423,6 +450,8 @@ server.route("get", "/", (req, res, next) => {
   );
 });
 ```
+
+The third argument (the MIME type) is optional. When omitted, Cpeak infers it from the file extension using the registry on the `cpeak()` constructor.
 
 You can then inject the variables into your file in {{ variable_name }} like this:
 
@@ -651,13 +680,11 @@ Here you can see all the features that Cpeak offers (excluding the authenticatio
 ```javascript
 import cpeak, { serveStatic, parseJSON, render, cookieParser, cors } from "cpeak";
 
-const server = cpeak();
+const server = cpeak({
+  mimeTypes: { mp3: "audio/mpeg" }
+});
 
-server.beforeEach(
-  serveStatic("./public", {
-    mp3: "audio/mpeg"
-  })
-);
+server.beforeEach(serveStatic("./public"));
 
 server.beforeEach(render());
 

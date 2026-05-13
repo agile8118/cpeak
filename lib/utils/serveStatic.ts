@@ -1,37 +1,13 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import type { StringMap, CpeakRequest, CpeakResponse, Next } from "../types";
-
-const MIME_TYPES: StringMap = {
-  html: "text/html",
-  css: "text/css",
-  js: "application/javascript",
-  jpg: "image/jpeg",
-  jpeg: "image/jpeg",
-  png: "image/png",
-  svg: "image/svg+xml",
-  txt: "text/plain",
-  eot: "application/vnd.ms-fontobject",
-  otf: "font/otf",
-  ttf: "font/ttf",
-  woff: "font/woff",
-  woff2: "font/woff2",
-  gif: "image/gif",
-  ico: "image/x-icon",
-  json: "application/json",
-  webmanifest: "application/manifest+json"
-};
+import { MIME_TYPES } from "../internal/mimeTypes";
+import type { CpeakRequest, CpeakResponse, Next } from "../types";
 
 const serveStatic = (
   folderPath: string,
-  options?: { prefix?: string; live?: boolean; newMimeTypes?: StringMap }
+  options?: { prefix?: string; live?: boolean }
 ) => {
-  // For new user defined mime types
-  if (options?.newMimeTypes) {
-    Object.assign(MIME_TYPES, options?.newMimeTypes);
-  }
-
   const prefix = options?.prefix ?? "";
   const live = options?.live ?? false;
 

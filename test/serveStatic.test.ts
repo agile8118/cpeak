@@ -11,9 +11,9 @@ describe("Serving static files with serveStatic", function () {
   let server: Cpeak;
 
   before(function (done) {
-    server = cpeak();
+    server = cpeak({ mimeTypes: { m4a: "audio/mp4" } });
 
-    server.beforeEach(serveStatic("./test/files", { m4a: "audio/mp4" }));
+    server.beforeEach(serveStatic("./test/files"));
 
     server.listen(PORT, done);
   });
