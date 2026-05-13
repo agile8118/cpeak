@@ -2,11 +2,15 @@
 
 [![npm version](https://badge.fury.io/js/cpeak.svg)](https://www.npmjs.com/package/cpeak)
 
-Cpeak is a minimal and fast Node.js framework inspired by Express.js.
+Cpeak is a minimal and fast Node.js framework inspired by Express.js & Fastify.
 
-This project is designed to be improved until it's ready for use in complex production applications, aiming to be more performant and minimal than Express.js. This framework is intended for HTTP applications that primarily deal with JSON and file-based message bodies.
+This project is designed to be improved until it's ready for use in complex production applications, aiming to be more performant and have a cleaner structure than Express.js and other common frameworks.
 
-This is an educational project that was started as part of the [Understanding Node.js: Core Concepts](https://www.udemy.com/course/understanding-nodejs-core-concepts/?referralCode=0BC21AC4DD6958AE6A95) course. If you want to learn how to build a framework like this, and get to a point where you can build things like this yourself, check out this course!
+Cpeak replaces Express.js, body-parser, cookie-parser, compression, CORS, Passport and more, in one zero-dependency package. You can use it as a drop-in replacement for Express.js, and many npm packages that work with Express.js will also work with Cpeak. 
+
+Cpeak currently has almost all the features of Express.js, with roughly the same performance as Fastify. Additionally, it has a codebase that you can easily navigate, audit and change if you want. *Benchmarks and test results, and videos on navigating and understanding the codebase will be added soon.*
+
+While Cpeak is being built for production, it is also an educational project that was started as part of the [Understanding Node.js: Core Concepts](https://www.udemy.com/course/understanding-nodejs-core-concepts/?referralCode=0BC21AC4DD6958AE6A95) course. If you want to learn how to build a framework like this, and get to a point where you can build things like this yourself and beyond, check out this course!
 
 ## Why Cpeak?
 
@@ -168,6 +172,8 @@ server.route("patch", "/the-path-you-want", (req, res) => {
 ```
 
 First add the HTTP method name you want to handle, then the path, and finally, the callback. The `req` and `res` object types are the same as in the Node.js HTTP module (`http.IncomingMessage` and `http.ServerResponse`). You can read more about them in the [official Node.js documentation](https://nodejs.org/docs/latest/api/http.html).
+
+Under the hood, Cpeak stores your routes in a radix tree, so finding the right route for an incoming request is roughly O(log n) in your total route count. In plain terms, that means matching stays fast even when your app has hundreds or thousands of routes. You won't pay a linear scan per request as your route table grows.
 
 ### URL Variables & Parameters
 
