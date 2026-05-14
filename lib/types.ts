@@ -6,7 +6,10 @@ import type { CpeakIncomingMessage, CpeakServerResponse } from "./index";
 
 export type { Cpeak } from "./index";
 
-export type CpeakHttpServer = Server<typeof CpeakIncomingMessage, typeof CpeakServerResponse>;
+export type CpeakHttpServer = Server<
+  typeof CpeakIncomingMessage,
+  typeof CpeakServerResponse
+>;
 
 // For constructor options passed to `cpeak()`
 export interface CpeakOptions {
@@ -51,20 +54,20 @@ export type Middleware<ReqBody = any, ReqParams = any> = (
   req: CpeakRequest<ReqBody, ReqParams>,
   res: CpeakResponse,
   next: Next
-) => void;
+) => unknown;
 
 // Route middleware: (req, res, next)
 export type RouteMiddleware<ReqBody = any, ReqParams = any> = (
   req: CpeakRequest<ReqBody, ReqParams>,
   res: CpeakResponse,
   next: Next
-) => void | Promise<void>;
+) => unknown;
 
 // Route handlers: (req, res). To signal an error, throw it.
 export type Handler<ReqBody = any, ReqParams = any> = (
   req: CpeakRequest<ReqBody, ReqParams>,
   res: CpeakResponse
-) => void | Promise<void>;
+) => unknown;
 
 // Represents a single registered route.
 export interface Route {

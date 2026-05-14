@@ -29,6 +29,7 @@ While Cpeak is being built for production, it is also an educational project tha
   - [Middleware](#middleware)
   - [Route Handling](#route-handling)
   - [Route Middleware](#route-middleware)
+  - [Fallback Handler](#fallback-handler)
   - [URL Variables & Parameters](#url-variables--parameters)
   - [Sending Files](#sending-files)
   - [Redirecting](#redirecting)
@@ -174,6 +175,18 @@ server.route("patch", "/the-path-you-want", (req, res) => {
 First add the HTTP method name you want to handle, then the path, and finally, the callback. The `req` and `res` object types are the same as in the Node.js HTTP module (`http.IncomingMessage` and `http.ServerResponse`). You can read more about them in the [official Node.js documentation](https://nodejs.org/docs/latest/api/http.html).
 
 Under the hood, Cpeak stores your routes in a radix tree, so finding the right route for an incoming request is roughly O(log n) in your total route count. In plain terms, that means matching stays fast even when your app has hundreds or thousands of routes. You won't pay a linear scan per request as your route table grows.
+
+### Fallback Handler
+
+If no route or middleware matches an incoming request, Cpeak returns a default `404` message. You can replace it with your own handler using `server.fallback`:
+
+```javascript
+server.fallback((req, res) => {
+  return res.status(404).json({ error: "not found" });
+});
+```
+
+Use this for custom 404 pages, JSON error envelopes, or serving an SPA's `index.html` for unknown paths. Static, param, and `*` wildcard routes still win when they match, the fallback only fires once the router has no match.
 
 ### URL Variables & Parameters
 

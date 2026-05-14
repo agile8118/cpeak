@@ -175,6 +175,7 @@ export class Cpeak {
   #router: Router;
   #middleware: Middleware[];
   #handleErr?: (err: unknown, req: CpeakRequest, res: CpeakResponse) => void;
+  #fallback?: Handler;
   #compression?: ResolvedCompressionConfig;
 
   constructor(options: CpeakOptions = {}) {
@@ -288,7 +289,16 @@ export class Cpeak {
               );
             }
 
-            // If the requested route dose not exist, return 404
+            // If a fallback handler is registered, run it before falling back to the default 404
+            if (this.#fallback) {
+              try {
+                return await this.#fallback(req, res);
+              } catch (error) {
+                return dispatchError(error);
+              }
+            }
+
+            // If the requested route dose not exist, and developer has not registered the fallback handler, return 404
             return res
               .status(404)
               .json({ error: `Cannot ${req.method} ${urlWithoutQueries}` });
@@ -331,6 +341,18 @@ export class Cpeak {
 
   handleErr(cb: (err: unknown, req: CpeakRequest, res: CpeakResponse) => void) {
     this.#handleErr = cb;
+  }
+
+  // This will handle any request that doesn't match any of the routes and middleware functions
+  fallback(cb: Handler) {
+    if (this.#fallback) {
+      throw frameworkError(
+        "Fallback handler is already registered. Only one fallback can be set per app.",
+        this.fallback,
+        ErrorCode.DUPLICATE_FALLBACK
+      );
+    }
+    this.#fallback = cb;
   }
 
   // The first 3 listens are just TS overloads for better type inference and editor autocompletion. The last one is the actual implementation.
